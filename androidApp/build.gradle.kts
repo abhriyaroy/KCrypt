@@ -8,7 +8,7 @@ android {
     compileSdk = 33
     defaultConfig {
         applicationId = "studio.zebro.kcryptapp.android"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 33
         versionCode = 1
         versionName = "1.0"
@@ -40,6 +40,7 @@ android {
 
 dependencies {
     implementation(project(":shared"))
+    implementation(project(":KCrypt"))
     implementation("androidx.compose.ui:ui:1.4.0")
     implementation("androidx.compose.ui:ui-tooling:1.4.0")
     implementation("androidx.compose.ui:ui-tooling-preview:1.4.0")

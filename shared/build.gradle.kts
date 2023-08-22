@@ -28,7 +28,12 @@ kotlin {
     }
     
     sourceSets {
-        val commonMain by getting
+        val commonMain by getting {
+            dependencies {
+//                implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar"))))
+                implementation(project(":KCrypt"))
+            }
+        }
         val commonTest by getting {
             dependencies {
                 implementation(kotlin("test"))
@@ -61,6 +66,6 @@ android {
     namespace = "studio.zebro.kcryptapp"
     compileSdk = 33
     defaultConfig {
-        minSdk = 24
+        minSdk = 26
     }
 }
