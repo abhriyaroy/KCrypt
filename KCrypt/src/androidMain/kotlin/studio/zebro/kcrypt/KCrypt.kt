@@ -1,29 +1,23 @@
 package studio.zebro.kcrypt
 
 import KCryptEntity
-import android.content.Context
-import android.content.SharedPreferences
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
-import android.util.Log
 import io.realm.kotlin.Realm
 import io.realm.kotlin.RealmConfiguration
 import java.nio.charset.Charset
 import java.security.Key
-import java.security.KeyPairGenerator
 import java.security.KeyStore
 import java.util.*
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
-import javax.crypto.SecretKey
 import javax.crypto.spec.IvParameterSpec
 
 class KCryptAndroid : KCrypt {
   private val keyAlias = "encryption_key"
   private lateinit var keystore: KeyStore
-  private val prefsKeyAlias = "storedKey"
-  private val prefsName = "KCryptPrefs"
   private var realm: Realm? = null
+  private val keystoreProviderName = "AndroidKeyStore"
 
   override fun getEncryptionKey(): String {
     initializeKeystore()
@@ -40,9 +34,7 @@ class KCryptAndroid : KCrypt {
   }
 
   private fun initializeKeystore(): KeyStore {
-    // There could be many keystore providers.
-    // We are interested in AndroidKeyStore
-    keystore = KeyStore.getInstance("AndroidKeyStore")
+    keystore = KeyStore.getInstance(keystoreProviderName)
     keystore.load(null)
     return keystore
   }
@@ -51,9 +43,8 @@ class KCryptAndroid : KCrypt {
     // Specify the algorithm to be used
     val generator = KeyGenerator.getInstance(
       KeyProperties.KEY_ALGORITHM_AES,
-      "AndroidKeyStore"
+      keystoreProviderName
     )
-    // Configurations for the key
     val generatorSpec = KeyGenParameterSpec.Builder(
       alias,
       KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
@@ -62,27 +53,21 @@ class KCryptAndroid : KCrypt {
       .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_PKCS7)
 
     generator.init(generatorSpec.build())
-    // Generate the key
     return generator.generateKey()
   }
 
-  // Retrieve the reference to the key by passing the same alias
-// that was used while creating
   private fun getAsymmetricKey(alias: String): Key {
     return keystore.getKey(alias, CharArray(0))
   }
 
   private fun encryptDataAsymmetric(alias: String, data: String): String {
-    var key = getAsymmetricKey(alias)
-    var plainTextByteArray = data.toByteArray(Charset.defaultCharset())
+    val key = getAsymmetricKey(alias)
+    val plainTextByteArray = data.toByteArray(Charset.defaultCharset())
 
-    var cipher = Cipher.getInstance("AES/CBC/PKCS7Padding")
+    val cipher = Cipher.getInstance("AES/CBC/PKCS7Padding")
     cipher.init(Cipher.ENCRYPT_MODE, key)
-    var cipherText = cipher.doFinal(plainTextByteArray)
+    val cipherText = cipher.doFinal(plainTextByteArray)
 
-    // IV needs to be preserved which will be used during decryption
-    // Encode cipher text and the iv to Base64 format
-    // Concatenate both strings separated by a comma(,)
     return Base64.getEncoder()
       .encodeToString(cipherText) +
         "," +
@@ -90,20 +75,17 @@ class KCryptAndroid : KCrypt {
   }
 
   private fun decryptDataAsymmetric(alias: String, data: String): String {
-    var key = getAsymmetricKey(alias)
+    val key = getAsymmetricKey(alias)
 
-    // Extract the cipher text and the IV
-    var parts = data.split(",")
+    val parts = data.split(",")
 
-    // Base64 decode of cipher text
-    var plainTextByteArray = Base64.getDecoder().decode(parts[0])
+    val plainTextByteArray = Base64.getDecoder().decode(parts[0])
 
-    // Base64 decode of the IV
-    var iv = Base64.getDecoder().decode(parts[1])
+    val iv = Base64.getDecoder().decode(parts[1])
 
-    var cipher = Cipher.getInstance("AES/CBC/PKCS7Padding")
+    val cipher = Cipher.getInstance("AES/CBC/PKCS7Padding")
     cipher.init(Cipher.DECRYPT_MODE, key, IvParameterSpec(iv))
-    var cipherText = cipher.doFinal(plainTextByteArray)
+    val cipherText = cipher.doFinal(plainTextByteArray)
 
     return cipherText.toString(Charset.defaultCharset())
   }
