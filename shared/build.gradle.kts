@@ -31,7 +31,9 @@ kotlin {
         val commonMain by getting {
             dependencies {
 //                implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar"))))
-                implementation(project(":KCrypt"))
+//                implementation(project(":KCrypt"))
+              implementation("io.github.abhriyaroy:KCrypt:0.0.1")
+
             }
         }
         val commonTest by getting {
@@ -39,7 +41,11 @@ kotlin {
                 implementation(kotlin("test"))
             }
         }
-        val androidMain by getting
+        val androidMain by getting {
+          dependencies {
+//            implementation("io.github.abhriyaroy:KCrypt:unspecified")
+          }
+        }
         val androidUnitTest by getting
         val iosX64Main by getting
         val iosArm64Main by getting
