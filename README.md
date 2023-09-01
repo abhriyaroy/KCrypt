@@ -1,10 +1,5 @@
 <p align="center"><img src="KCrypt.png" height="400"></p>
 
-
-Absolutely, here's a GitHub README template you can use for your Kotlin Multiplatform Mobile (KMM) project:
-
----
-
 # KCrypt: Secure Key Management for Multiplatform Apps
 
 KCryp is a Kotlin Multiplatform Mobile (KMM) library that provides a secure and unified way to manage encryption keys across iOS and Android platforms. It abstracts the complexities of key generation, encryption, and storage, allowing you to focus on building secure and robust multiplatform applications.
@@ -28,7 +23,7 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                implementation("to-be-added")
+                implementation("io.github.abhriyaroy:KCrypt:0.0.1")
             }
         }
     }
@@ -60,7 +55,3 @@ Contributions to KCrypt are welcome! Feel free to open issues for feature reques
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
-
----
-
-Feel free to customize this template with your project-specific details, such as group ID, artifact ID, and version. This README will give potential users and contributors a clear understanding of what your KCrypt library does, how to use it, and how to get involved.
