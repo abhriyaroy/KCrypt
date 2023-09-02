@@ -56,7 +56,7 @@ kotlin {
 
 ```kotlin
 // Shared code
-import your.group.id.getKCrypt
+import studio.zebro.kcrypt.getKCrypt
 
 val kCrypt = getKCrypt()
 val encryptionKey = kCrypt.getEncryptionKey()
