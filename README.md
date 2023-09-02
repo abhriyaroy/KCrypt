@@ -13,6 +13,26 @@ KCrypt is a Kotlin Multiplatform Mobile (KMM) library that provides a secure and
 - Storage of key-value pairs securely.
 - Ability to maintain multiple keys.
 
+## Use case
+
+If you want a secure String that you can use for encryption or any other cryptographic reasons, KCrpyt provides you with one.
+For example:
+If we take the [Realm Kmm library](https://github.com/realm/realm-kotlin), in order to encrypt the db we need to provide it with a key
+
+```kotlin
+val config = RealmConfiguration
+      .Builder(
+        schema = setOf(
+          UserDbEntity::class,
+          ClipboardDbEntity::class
+        )
+      )
+      .schemaVersion(dbVersion)
+      .encryptionKey(<provide encryption key here>)
+      .build()
+```
+Here you need to provide a key to the `encryptionKey()` method. Here comes KCrypt which provides a unique secure key across Android and iOS, that can be passed to the `encryptionKey()` method.
+
 ## Usage
 
 To get started with KCrypt in your KMM project, follow these steps:
@@ -25,13 +45,12 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                implementation("io.github.abhriyaroy:KCrypt:${latestVersion}")
+                implementation("io.github.abhriyaroy:KCrypt:0.0.5")
             }
         }
     }
 }
 ```
-The latest version of the library is ![Latest Version](https://maven-badges.herokuapp.com/maven-central/io.github.abhriyaroy/KCrypt/badge.svg)
 
 2. Use KCrypt in your shared code:
 
