@@ -46,15 +46,11 @@ publishing {
     maven {
       name = "KCrypt"
       group = "io.github.abhriyaroy"
-      version = "0.0.2"
+      version = "0.0.5"
       setUrl("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
       credentials {
-        username = getExtraString("ossrhUsername").apply {
-          println(this)
-        }
-        password = getExtraString("ossrhPassword").apply {
-          println(this)
-        }
+        username = getExtraString("ossrhUsername")
+        password = getExtraString("ossrhPassword")
       }
     }
   }

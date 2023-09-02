@@ -13,9 +13,3 @@ dependencyResolutionManagement {
     mavenCentral()
   }
 }
-
-rootProject.name = "KCrypt"
-include(":androidApp")
-include(":shared")
-include(":KCrypt")
-includeBuild("convention-plugins")
