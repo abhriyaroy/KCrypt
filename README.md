@@ -2,7 +2,7 @@
 
 # KCrypt: Secure Key Management for Multiplatform Apps
 
-KCryp is a Kotlin Multiplatform Mobile (KMM) library that provides a secure and unified way to manage encryption keys across iOS and Android platforms. It abstracts the complexities of key generation, encryption, and storage, allowing you to focus on building secure and robust multiplatform applications.
+KCrypt is a Kotlin Multiplatform Mobile (KMM) library that provides a secure and unified way to manage encryption keys across iOS and Android platforms. It abstracts the complexities of key generation, encryption, and storage, allowing you to focus on building secure and robust multiplatform applications.
 
 ## Features
 
@@ -16,19 +16,20 @@ KCryp is a Kotlin Multiplatform Mobile (KMM) library that provides a secure and 
 To get started with KCrypt in your KMM project, follow these steps:
 
 1. Add the KCrypt dependency to your shared module's `build.gradle.kts`:
-
+   
 ```kotlin
 // build.gradle.kts in the shared module
 kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                implementation("io.github.abhriyaroy:KCrypt:0.0.1")
+                implementation("io.github.abhriyaroy:KCrypt:${latestVersion}")
             }
         }
     }
 }
 ```
+The latest version of the library is ![Latest Version](https://maven-badges.herokuapp.com/maven-central/io.github.abhriyaroy/KCrypt/badge.svg)
 
 2. Use KCrypt in your shared code:
 
@@ -43,7 +44,7 @@ val encryptionKey = kCrypt.getEncryptionKey()
 
 ## Compatibility
 
-KCryp is designed to work with Kotlin Multiplatform Mobile projects targeting both iOS and Android platforms.
+KCrypt is designed to work with Kotlin Multiplatform Mobile projects targeting both iOS and Android platforms.
 
 - Minimum Android version: Android 5.0 (API level 21)
 - Minimum iOS version: iOS 9.0
