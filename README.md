@@ -46,8 +46,8 @@ val encryptionKey = kCrypt.getEncryptionKey()
 
 KCrypt is designed to work with Kotlin Multiplatform Mobile projects targeting both iOS and Android platforms.
 
-- Minimum Android version: Android 5.0 (API level 21)
-- Minimum iOS version: iOS 9.0
+- Minimum Android version: Android 8.0 (API level 26)
+- Minimum iOS version: iOS 13.0
 
 ## Contributing
 
