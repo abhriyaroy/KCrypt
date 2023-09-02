@@ -31,7 +31,7 @@ val config = RealmConfiguration
       .encryptionKey(<provide encryption key here>)
       .build()
 ```
-Here you need to provide a key to the `encryptionKey()` method. Here comes KCrypt which provides a unique secure key across Android and iOS, that can be passed to the `encryptionKey()` method.
+We need to provide a key to the `encryptionKey()` method. Here comes KCrypt which provides a unique secure key across Android and iOS, that can be passed to the `encryptionKey()` method. Similarly, KCrypt can be used for other encryption/cryptographic purposes where one needs an encryption key.
 
 ## Usage
 
