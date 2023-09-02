@@ -2,14 +2,16 @@
 
 # KCrypt: Secure Key Management for Multiplatform Apps
 
-KCrypt is a Kotlin Multiplatform Mobile (KMM) library that provides a secure and unified way to manage encryption keys across iOS and Android platforms. It abstracts the complexities of key generation, encryption, and storage, allowing you to focus on building secure and robust multiplatform applications.
+KCrypt is a Kotlin Multiplatform Mobile (KMM) library that provides a secure and unified way to manage encryption keys across iOS and Android platforms. It abstracts the complexities of key generation, encryption, and storage, thereby providing you with a unique key that can be used for cryptographic purposes, allowing you to focus on building secure and robust multiplatform applications.
 
 ## Features
 
-- Unified API: Write your encryption logic once and use it seamlessly across both iOS and Android platforms.
-- Secure Key Generation: KCrypt handles the generation of secure encryption keys based on platform-specific best practices.
-- Secure Storage: The library securely stores your encryption keys using platform-specific secure storage mechanisms (Keychain on iOS and Keystore on Android).
+- Secure Key Generation: KCrypt handles the generation of secure encryption keys based on platform-specific best practices and provides you with a unique key that persists as long as the app stays installed.
 - Cross-Platform Compatibility: Build multiplatform applications with shared encryption logic that works consistently on iOS and Android.
+
+## Upcoming features
+- Storage of key-value pairs securely.
+- Ability to maintain multiple keys.
 
 ## Usage
 
