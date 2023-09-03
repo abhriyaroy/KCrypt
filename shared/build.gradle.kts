@@ -8,7 +8,6 @@ repositories {
   google()
   gradlePluginPortal()
   mavenCentral()
-  mavenLocal()
 }
 
 kotlin {
@@ -37,7 +36,8 @@ kotlin {
   sourceSets {
     val commonMain by getting {
       dependencies {
-        implementation("io.github.abhriyaroy:KCrypt:0.0.5")
+        implementation(project(":KCrypt"))
+//        implementation("io.github.abhriyaroy:KCrypt:0.0.5")
 
       }
     }

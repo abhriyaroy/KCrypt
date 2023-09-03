@@ -8,6 +8,7 @@ import io.realm.kotlin.RealmConfiguration
 import java.nio.charset.Charset
 import java.security.Key
 import java.security.KeyStore
+import java.security.SecureRandom
 import java.util.*
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
@@ -19,18 +20,42 @@ class KCryptAndroid : KCrypt {
   private var realm: Realm? = null
   private val keystoreProviderName = "AndroidKeyStore"
 
-  override fun getEncryptionKey(): String {
+  override fun getEncryptionKey(keySize : Int): ByteArray? {
     initializeKeystore()
     return if (keystore.containsAlias(keyAlias)) {
-      decryptDataAsymmetric(keyAlias, getEncodedKey())
+      hexStringToByteArray(decryptDataAsymmetric(keyAlias, getEncodedKey()))
     } else {
       generateSymmetricKey(keyAlias)
-      val cipherKey = UUID.randomUUID().toString()
-      saveEncodedKey(encryptDataAsymmetric(keyAlias, cipherKey))
+      val cipherKey = generate64ByteByteArray(keySize)
+      saveEncodedKey(encryptDataAsymmetric(keyAlias, byteArrayToHexString(cipherKey)))
       cipherKey
     }
+  }
 
+  override fun getEncryptionKeyToHexString(keySize: Int): String {
+    return getEncryptionKey(keySize)?.let {
+      byteArrayToHexString(it)
+    } ?: "NA"
+  }
 
+  override fun byteArrayToHexString(byteArray: ByteArray): String {
+    return byteArray.joinToString("") { "%02x".format(it) }
+  }
+
+  override fun hexStringToByteArray(hexString: String): ByteArray? {
+    val cleanHexString = hexString.replace(" ", "") // Remove spaces if present
+    val byteArray = ByteArray(cleanHexString.length / 2)
+
+    try {
+      for (i in cleanHexString.indices step 2) {
+        val byteValue = cleanHexString.substring(i, i + 2).toInt(16)
+        byteArray[i / 2] = byteValue.toByte()
+      }
+      return byteArray
+    } catch (e: NumberFormatException) {
+      // Handle invalid hex string format
+      return null
+    }
   }
 
   private fun initializeKeystore(): KeyStore {
@@ -108,6 +133,14 @@ class KCryptAndroid : KCrypt {
       realm = Realm.open(configuration)
     }
     return realm!!
+  }
+
+  private fun generate64ByteByteArray(keySize: Int): ByteArray {
+    val secureRandom = SecureRandom()
+    val byteArray = ByteArray(keySize)
+    secureRandom.nextBytes(byteArray)
+    println("sadasd ${byteArray.size}")
+    return byteArray
   }
 }
 

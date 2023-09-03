@@ -13,6 +13,7 @@ import platform.Foundation.*
 import platform.darwin.OSStatus
 import platform.darwin.noErr
 import platform.Foundation.NSUUID
+import platform.posix.arc4random_buf
 
 class KCryptIos : KCrypt {
 
@@ -29,17 +30,47 @@ class KCryptIos : KCrypt {
     AfterFirstUnlockThisDeviceOnly(kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly)
   }
 
-  override fun getEncryptionKey(): String {
+  override fun getEncryptionKey(keySize : Int): ByteArray? {
     val preStoredEncryptionKey = value(forKey = keyName)
     return if (preStoredEncryptionKey != null) {
       println("pre stored key available")
-      preStoredEncryptionKey.stringValue ?: ""
+      preStoredEncryptionKey.stringValue?.let {
+        hexStringToByteArray(it)
+      }
     } else {
       println("pre stored key not available")
-      val newEncryptionKey = NSUUID().UUIDString()
-      addOrUpdate(keyName, newEncryptionKey.toNSData())
+      val newEncryptionKey = generateRandomByteArray(keySize)
+      addOrUpdate(keyName, byteArrayToHexString(newEncryptionKey).toNSData())
       newEncryptionKey
     }
+  }
+
+  override fun getEncryptionKeyToHexString(keySize: Int): String {
+    return getEncryptionKey(keySize)?.let {
+      byteArrayToHexString(it)
+    } ?: "NA"
+  }
+
+  override fun byteArrayToHexString(byteArray: ByteArray): String {
+    val hexChars = "0123456789ABCDEF".toCharArray()
+    val result = StringBuilder()
+
+    for (byte in byteArray) {
+      val highNibble = (byte.toInt() ushr 4) and 0x0F
+      val lowNibble = byte.toInt() and 0x0F
+      result.append(hexChars[highNibble])
+      result.append(hexChars[lowNibble])
+    }
+    return result.toString()
+  }
+
+  override fun hexStringToByteArray(hexString: String): ByteArray? {
+    val result = ByteArray(hexString.length / 2)
+    for (i in hexString.indices step 2) {
+      val byte = hexString.substring(i, i + 2).toInt(16).toByte()
+      result[i / 2] = byte
+    }
+    return result
   }
 
   private fun addOrUpdate(key: String, value: NSData?): Boolean {
@@ -94,7 +125,6 @@ class KCryptIos : KCrypt {
     }
   }
 
-
   private fun existsObject(forKey: String): Boolean = context(forKey) { (account) ->
     val query = query(
       kSecClass to kSecClassGenericPassword,
@@ -105,6 +135,7 @@ class KCryptIos : KCrypt {
     SecItemCopyMatching(query, null)
       .validate()
   }
+
 
   private class Context(val refs: Map<CFStringRef?, CFTypeRef?>) {
     fun query(vararg pairs: Pair<CFStringRef?, CFTypeRef?>): CFDictionaryRef? {
@@ -141,6 +172,12 @@ class KCryptIos : KCrypt {
     return (this.toUInt() == noErr).apply {
       if (!this) println("Error: $this")
     }
+  }
+
+  private fun generateRandomByteArray(length : Int): ByteArray {
+    val byteArray = ByteArray(length)
+    arc4random_buf(byteArray.refTo(0), byteArray.size.convert())
+    return byteArray
   }
 
 }
