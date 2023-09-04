@@ -19,6 +19,7 @@ class KCryptAndroid : KCrypt {
   private lateinit var keystore: KeyStore
   private var realm: Realm? = null
   private val keystoreProviderName = "AndroidKeyStore"
+  private val realmName = "krypt.realm"
 
   override fun getEncryptionKey(keySize : Int): ByteArray? {
     initializeKeystore()
@@ -129,7 +130,14 @@ class KCryptAndroid : KCrypt {
 
   private fun getRealm(): Realm {
     if (realm == null) {
-      val configuration = RealmConfiguration.create(schema = setOf(KCryptEntity::class))
+      val configuration = RealmConfiguration
+        .Builder(
+          schema = setOf(
+            KCryptEntity::class,
+          )
+        )
+        .name(realmName)
+        .build()
       realm = Realm.open(configuration)
     }
     return realm!!
@@ -139,7 +147,6 @@ class KCryptAndroid : KCrypt {
     val secureRandom = SecureRandom()
     val byteArray = ByteArray(keySize)
     secureRandom.nextBytes(byteArray)
-    println("sadasd ${byteArray.size}")
     return byteArray
   }
 }
