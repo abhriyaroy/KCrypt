@@ -28,7 +28,7 @@ val config = RealmConfiguration
         )
       )
       .schemaVersion(dbVersion)
-      .encryptionKey(<provide encryption key here>)
+      .encryptionKey(getKCrypt().getEncryptionKey()!!)
       .build()
 ```
 We need to provide a key to the `encryptionKey()` method. Here comes KCrypt which provides a unique secure key across Android and iOS, that can be passed to the `encryptionKey()` method. Similarly, KCrypt can be used for other encryption/cryptographic purposes where one needs an encryption key.
@@ -59,7 +59,18 @@ kotlin {
 import studio.zebro.kcrypt.getKCrypt
 
 val kCrypt = getKCrypt()
-val encryptionKey = kCrypt.getEncryptionKey()
+
+// to get encryption key in 64 byte array
+val encryptionKeyByteArray : ByteArray = kCrypt.getEncryptionKey()
+
+// to get encryption key as a String representation of 64 byte array
+val encryptionkeyInString : String = kCrypt.getEncryptionKeyToHexString()
+
+// to convert byte array to string
+val convertedByteArrayInString : String = kCrypt.byteArrayToHexString(encryptionKeyByteArray)
+
+// to convert hex string to byte array
+val convertedStringInByteArray : ByteArray = kCrypt.hexStringToByteArray(encryptionkeyInString)
 ```
 
 
