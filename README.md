@@ -45,7 +45,7 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                implementation("io.github.abhriyaroy:KCrypt:0.0.5")
+                implementation("io.github.abhriyaroy:KCrypt:0.0.7")
             }
         }
     }
