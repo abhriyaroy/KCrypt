@@ -3,6 +3,7 @@ plugins {
   id("com.android.library")
   id("io.realm.kotlin") version "1.10.0"
   id("convention.publication")
+  kotlin("plugin.serialization") version "1.5.21"
 }
 
 kotlin {
@@ -28,6 +29,7 @@ kotlin {
     val commonMain by getting {
       dependencies {
         implementation("io.realm.kotlin:library-base:1.10.0")
+        implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1")
       }
     }
     val commonTest by getting {

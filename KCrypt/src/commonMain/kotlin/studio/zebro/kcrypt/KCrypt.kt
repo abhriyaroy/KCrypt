@@ -5,6 +5,10 @@ interface KCrypt {
 
   fun getEncryptionKeyToHexString(keySize : Int = 64): String
 
+  fun saveEncryptionKey(key: ByteArray)
+
+  fun saveEncryptionKey(key: String, isHexString: Boolean)
+
   fun byteArrayToHexString(byteArray: ByteArray): String
 
   fun hexStringToByteArray(hexString: String): ByteArray?

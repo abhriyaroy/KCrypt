@@ -8,12 +8,15 @@ import platform.Foundation.NSData
 import platform.Foundation.create
 import platform.Security.*
 import kotlinx.cinterop.*
+import kotlinx.serialization.SerializationStrategy
+import kotlinx.serialization.json.Json
 import platform.CoreFoundation.*
 import platform.Foundation.*
 import platform.darwin.OSStatus
 import platform.darwin.noErr
 import platform.Foundation.NSUUID
 import platform.posix.arc4random_buf
+import studio.zebro.kcrypt.entity.KCryptKeychainEntity
 
 class KCryptIos : KCrypt {
 
@@ -23,24 +26,35 @@ class KCryptIos : KCrypt {
   val accessibility: Accessible = Accessible.WhenUnlocked
 
   enum class Accessible(val value: CFStringRef?) {
-    WhenPasscodeSetThisDeviceOnly(kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly),
-    WhenUnlockedThisDeviceOnly(kSecAttrAccessibleWhenUnlockedThisDeviceOnly),
-    WhenUnlocked(kSecAttrAccessibleWhenUnlocked),
-    AfterFirstUnlock(kSecAttrAccessibleAfterFirstUnlock),
+    WhenPasscodeSetThisDeviceOnly(kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly), WhenUnlockedThisDeviceOnly(
+      kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+    ),
+    WhenUnlocked(kSecAttrAccessibleWhenUnlocked), AfterFirstUnlock(
+      kSecAttrAccessibleAfterFirstUnlock
+    ),
     AfterFirstUnlockThisDeviceOnly(kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly)
   }
 
-  override fun getEncryptionKey(keySize : Int): ByteArray? {
+  override fun getEncryptionKey(keySize: Int): ByteArray? {
     val preStoredEncryptionKey = value(forKey = keyName)
     return if (preStoredEncryptionKey != null) {
       println("pre stored key available")
-      preStoredEncryptionKey.stringValue?.let {
-        hexStringToByteArray(it)
-      }
+      hexStringToByteArray(preStoredEncryptionKey.stringValue.let {
+        deSerialize(it)
+          .let {
+            if (it.isStringInHex) {
+              it.key
+            } else {
+              stringToHex(it.key)
+            }
+          }
+      })
     } else {
       println("pre stored key not available")
       val newEncryptionKey = generateRandomByteArray(keySize)
-      addOrUpdate(keyName, byteArrayToHexString(newEncryptionKey).toNSData())
+      addOrUpdate(
+        keyName, KCryptKeychainEntity(byteArrayToHexString(newEncryptionKey), false)
+      )
       newEncryptionKey
     }
   }
@@ -49,6 +63,16 @@ class KCryptIos : KCrypt {
     return getEncryptionKey(keySize)?.let {
       byteArrayToHexString(it)
     } ?: "NA"
+  }
+
+  override fun saveEncryptionKey(key: String, isHexString: Boolean) {
+    addOrUpdate(
+      keyName, KCryptKeychainEntity(key, isHexString)
+    )
+  }
+
+  override fun saveEncryptionKey(key: ByteArray) {
+    addOrUpdate(keyName, KCryptKeychainEntity(byteArrayToHexString(key), true))
   }
 
   override fun byteArrayToHexString(byteArray: ByteArray): String {
@@ -65,6 +89,7 @@ class KCryptIos : KCrypt {
   }
 
   override fun hexStringToByteArray(hexString: String): ByteArray? {
+    println("final hexStringToByteArray")
     val result = ByteArray(hexString.length / 2)
     for (i in hexString.indices step 2) {
       val byte = hexString.substring(i, i + 2).toInt(16).toByte()
@@ -73,13 +98,13 @@ class KCryptIos : KCrypt {
     return result
   }
 
-  private fun addOrUpdate(key: String, value: NSData?): Boolean {
+  private fun addOrUpdate(key: String, value: KCryptKeychainEntity): Boolean {
     return if (existsObject(key)) {
       println("addOrUpdate: update")
-      update(key, value)
+      update(key, value.toNsData())
     } else {
       println("addOrUpdate: add")
-      add(key, value)
+      add(key, value.toNsData())
     }
   }
 
@@ -91,11 +116,11 @@ class KCryptIos : KCrypt {
       kSecAttrAccessible to accessibility.value
     )
     println("query: ${query.toString()}")
-    SecItemAdd(query, null)
-      .validate()
+    SecItemAdd(query, null).validate()
   }
 
   private fun update(key: String, value: Any?): Boolean = context(key, value) { (account, data) ->
+    println("update: $account, $data")
     val query = query(
       kSecClass to kSecClassGenericPassword,
       kSecAttrAccount to account,
@@ -105,9 +130,8 @@ class KCryptIos : KCrypt {
     val updateQuery = query(
       kSecValueData to data
     )
-
-    SecItemUpdate(query, updateQuery)
-      .validate()
+    println("update done : $account, $data")
+    SecItemUpdate(query, updateQuery).validate()
   }
 
   private fun value(forKey: String): NSData? = context(forKey) { (account) ->
@@ -132,8 +156,7 @@ class KCryptIos : KCrypt {
       kSecReturnData to kCFBooleanFalse,
     )
 
-    SecItemCopyMatching(query, null)
-      .validate()
+    SecItemCopyMatching(query, null).validate()
   }
 
 
@@ -164,8 +187,8 @@ class KCryptIos : KCrypt {
   private fun String.toNSData(): NSData? =
     NSString.create(string = this).dataUsingEncoding(NSUTF8StringEncoding)
 
-  private val NSData.stringValue: String?
-    get() = NSString.create(this, NSUTF8StringEncoding) as String?
+  private val NSData.stringValue: String
+    get() = NSString.create(this, NSUTF8StringEncoding) as String
 
   private fun OSStatus.validate(): Boolean {
     println("status: $this")
@@ -174,10 +197,39 @@ class KCryptIos : KCrypt {
     }
   }
 
-  private fun generateRandomByteArray(length : Int): ByteArray {
+  private fun generateRandomByteArray(length: Int): ByteArray {
     val byteArray = ByteArray(length)
     arc4random_buf(byteArray.refTo(0), byteArray.size.convert())
     return byteArray
+  }
+
+  private fun stringToHex(input: String): String {
+    memScoped {
+      val data = input.cstr.ptr
+      val length = input.length
+
+      val hexString = StringBuilder()
+
+      for (i in 0 until length) {
+        val byteValue = data[i].toInt() and 0xFF // Convert UByte to Int
+        hexString.append(
+          byteValue.toString(16).padStart(2, '0')
+        ) // Convert to hexadecimal and pad with zeros
+      }
+
+      return hexString.toString()
+    }
+  }
+
+  private fun KCryptKeychainEntity.toNsData(): NSData {
+    val json = Json { isLenient = true; ignoreUnknownKeys = true }
+    return NSString.create(string = json.encodeToString(KCryptKeychainEntity.serializer(), this))
+      .dataUsingEncoding(NSUTF8StringEncoding) ?: NSData()
+  }
+
+  private fun deSerialize(data: String): KCryptKeychainEntity {
+    val json = Json { isLenient = true; ignoreUnknownKeys = true }
+    return json.decodeFromString(KCryptKeychainEntity.serializer(), data)
   }
 
 }

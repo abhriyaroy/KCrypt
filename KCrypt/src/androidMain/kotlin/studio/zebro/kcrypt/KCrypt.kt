@@ -21,22 +21,52 @@ class KCryptAndroid : KCrypt {
   private val keystoreProviderName = "AndroidKeyStore"
   private val realmName = "krypt.realm"
 
-  override fun getEncryptionKey(keySize : Int): ByteArray? {
+  override fun getEncryptionKey(keySize: Int): ByteArray? {
     initializeKeystore()
     return if (keystore.containsAlias(keyAlias)) {
-      hexStringToByteArray(decryptDataAsymmetric(keyAlias, getEncodedKey()))
+      hexStringToByteArray(decryptDataAsymmetric(keyAlias,
+        getEncodedKey().let {
+          if(it.isStringInHex){
+            it.encodedKey
+          } else {
+            stringToHex(it.encodedKey)
+          }
+        }))
     } else {
       generateSymmetricKey(keyAlias)
       val cipherKey = generate64ByteByteArray(keySize)
-      saveEncodedKey(encryptDataAsymmetric(keyAlias, byteArrayToHexString(cipherKey)))
+      saveEncodedKey(encryptDataAsymmetric(keyAlias, byteArrayToHexString(cipherKey)), true)
       cipherKey
     }
   }
 
   override fun getEncryptionKeyToHexString(keySize: Int): String {
     return getEncryptionKey(keySize)?.let {
+      println("saved final $it")
       byteArrayToHexString(it)
     } ?: "NA"
+  }
+
+  override fun saveEncryptionKey(key: ByteArray) {
+    initializeKeystore()
+    generateSymmetricKey(keyAlias)
+    saveEncodedKey(encryptDataAsymmetric(keyAlias, byteArrayToHexString(key)), false)
+  }
+
+  override fun saveEncryptionKey(key: String, isHexString: Boolean) {
+    initializeKeystore()
+    generateSymmetricKey(keyAlias)
+    saveEncodedKey(
+      encryptDataAsymmetric(
+        keyAlias,
+        if (isHexString) {
+          key
+        } else {
+          stringToHex(key)
+        },
+      ),
+      isHexString = true
+    )
   }
 
   override fun byteArrayToHexString(byteArray: ByteArray): String {
@@ -55,6 +85,7 @@ class KCryptAndroid : KCrypt {
       return byteArray
     } catch (e: NumberFormatException) {
       // Handle invalid hex string format
+      e.printStackTrace()
       return null
     }
   }
@@ -113,19 +144,26 @@ class KCryptAndroid : KCrypt {
     cipher.init(Cipher.DECRYPT_MODE, key, IvParameterSpec(iv))
     val cipherText = cipher.doFinal(plainTextByteArray)
 
-    return cipherText.toString(Charset.defaultCharset())
+    return cipherText.toString(Charset.defaultCharset()).apply {
+      println("got saved key $this")
+    }
   }
 
-  private fun saveEncodedKey(key: String) {
+  private fun saveEncodedKey(key: String, isHexString: Boolean) {
     getRealm().writeBlocking {
+      deleteAll()
       copyToRealm(KCryptEntity().apply {
+        println("save $key")
         encodedKey = key
+        isStringInHex = isHexString
       })
     }
   }
 
-  private fun getEncodedKey(): String {
-    return getRealm().query(KCryptEntity::class).find().first().encodedKey
+  private fun getEncodedKey(): KCryptEntity {
+    return getRealm().query(KCryptEntity::class).find().first().apply {
+      println("get saved key $this")
+    }
   }
 
   private fun getRealm(): Realm {
@@ -148,6 +186,18 @@ class KCryptAndroid : KCrypt {
     val byteArray = ByteArray(keySize)
     secureRandom.nextBytes(byteArray)
     return byteArray
+  }
+
+  private fun stringToHex(input: String): String {
+    val stringBuilder = StringBuilder()
+    for (char in input) {
+      val hexString = Integer.toHexString(char.toInt())
+      stringBuilder.append(hexString)
+    }
+    return stringBuilder.toString()
+      .apply {
+        println("the value to save is $this")
+      }
   }
 }
 
