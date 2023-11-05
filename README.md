@@ -45,7 +45,7 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                implementation("io.github.abhriyaroy:KCrypt:0.0.7")
+                implementation("io.github.abhriyaroy:KCrypt:0.0.8")
             }
         }
     }
@@ -62,6 +62,9 @@ val kCrypt = getKCrypt()
 
 // to get encryption key in 64 byte array
 val encryptionKeyByteArray : ByteArray = kCrypt.getEncryptionKey()
+
+// to save a custom encryption key
+kCrypt.saveEncryptionKey("MyCustomKey", isHexString = false)
 
 // to get encryption key as a String representation of 64 byte array
 val encryptionkeyInString : String = kCrypt.getEncryptionKeyToHexString()
