@@ -18,6 +18,7 @@ import platform.Foundation.NSUUID
 import platform.posix.arc4random_buf
 import studio.zebro.kcrypt.entity.KCryptKeychainEntity
 
+@OptIn(ExperimentalForeignApi::class)
 class KCryptIos : KCrypt {
 
   val serviceName: String = "studio.zebro.kcrypt"
@@ -98,6 +99,48 @@ class KCryptIos : KCrypt {
     return result
   }
 
+  override fun saveString(key: String, value: String) {
+    addOrUpdate(key, value)
+  }
+
+  override fun getString(key: String): String? {
+    return value(key)?.stringValue
+  }
+
+  override fun saveBoolean(key: String, value: Boolean) {
+    addOrUpdate(key, value.toString())
+  }
+
+  override fun getBoolean(key: String): Boolean? {
+    return value(key)?.let {
+      it.stringValue.equals("true", true)
+    }
+  }
+
+  override fun saveDouble(key: String, value: Double) {
+    addOrUpdate(key, value.toString())
+  }
+
+  override fun getDouble(key: String): Double? {
+    return value(key)?.stringValue?.toDouble()
+  }
+
+  override fun saveFloat(key: String, value: Float) {
+    addOrUpdate(key, value.toString())
+  }
+
+  override fun getFloat(key: String): Float? {
+    return value(key)?.stringValue?.toFloat()
+  }
+
+  override fun saveInt(key: String, value: Int) {
+    addOrUpdate(key, value.toString())
+  }
+
+  override fun getInt(key: String): Int? {
+    return value(key)?.stringValue?.toInt()
+  }
+
   private fun addOrUpdate(key: String, value: KCryptKeychainEntity): Boolean {
     return if (existsObject(key)) {
       println("addOrUpdate: update")
@@ -105,6 +148,16 @@ class KCryptIos : KCrypt {
     } else {
       println("addOrUpdate: add")
       add(key, value.toNsData())
+    }
+  }
+
+  private fun addOrUpdate(key: String, value: String): Boolean {
+    return if (existsObject(key)) {
+      println("addOrUpdate: update")
+      update(key, value.toNSData())
+    } else {
+      println("addOrUpdate: add")
+      add(key, value.toNSData())
     }
   }
 

@@ -26,7 +26,7 @@ kotlin {
     summary = "Some description for the Shared Module"
     homepage = "Link to the Shared Module homepage"
     version = "1.0"
-    ios.deploymentTarget = "14.1"
+    ios.deploymentTarget = "17"
     podfile = project.file("../iosApp/Podfile")
     framework {
       baseName = "shared"
@@ -74,7 +74,7 @@ kotlin {
 
 android {
   namespace = "studio.zebro.kcryptapp"
-  compileSdk = 33
+  compileSdk = 34
   defaultConfig {
     minSdk = 26
   }

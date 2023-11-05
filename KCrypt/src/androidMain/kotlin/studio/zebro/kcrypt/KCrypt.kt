@@ -5,6 +5,10 @@ import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import io.realm.kotlin.Realm
 import io.realm.kotlin.RealmConfiguration
+import io.realm.kotlin.UpdatePolicy
+import io.realm.kotlin.migration.AutomaticSchemaMigration
+import io.realm.kotlin.migration.RealmMigration
+import studio.zebro.kcrypt.entity.KCryptStorageItemEntity
 import java.nio.charset.Charset
 import java.security.Key
 import java.security.KeyStore
@@ -24,14 +28,16 @@ class KCryptAndroid : KCrypt {
   override fun getEncryptionKey(keySize: Int): ByteArray? {
     initializeKeystore()
     return if (keystore.containsAlias(keyAlias)) {
-      hexStringToByteArray(decryptDataAsymmetric(keyAlias,
-        getEncodedKey().let {
-          if(it.isStringInHex){
-            it.encodedKey
-          } else {
-            stringToHex(it.encodedKey)
-          }
-        }))
+      hexStringToByteArray(
+        decryptDataAsymmetric(keyAlias,
+          getEncodedKey().let {
+            if (it.isStringInHex) {
+              it.encodedKey
+            } else {
+              stringToHex(it.encodedKey)
+            }
+          })
+      )
     } else {
       generateSymmetricKey(keyAlias)
       val cipherKey = generate64ByteByteArray(keySize)
@@ -90,6 +96,67 @@ class KCryptAndroid : KCrypt {
     }
   }
 
+  override fun saveString(key: String, value: String) {
+    initializeKeystore()
+    encryptDataAsymmetric(
+      keyAlias,
+      stringToHex(value)
+    ).run {
+      getRealm().writeBlocking {
+        copyToRealm(KCryptStorageItemEntity().apply {
+          println("save primary $key")
+          this.key = key
+          this.value = this@run
+        }, updatePolicy = UpdatePolicy.ALL)
+      }
+    }
+  }
+
+  override fun getString(key: String): String? {
+    initializeKeystore()
+    return decryptDataAsymmetric(keyAlias,
+      getRealm().query(KCryptStorageItemEntity::class).find().filter { it.key == key }.let {
+        println("get saved key value $this")
+        it.first().value as String
+      }).let {
+      hexStringToNormalString(it)
+    }
+  }
+
+  override fun saveBoolean(key: String, value: Boolean) {
+    saveString(key, value.toString())
+  }
+
+  override fun getBoolean(key: String): Boolean? {
+    return getString(key)?.let {
+      it.equals("true", true)
+    }
+  }
+
+  override fun saveDouble(key: String, value: Double) {
+    saveString(key, value.toString())
+  }
+
+  override fun getDouble(key: String): Double? {
+    return getString(key)?.toDouble()
+  }
+
+  override fun saveFloat(key: String, value: Float) {
+    saveString(key, value.toString())
+  }
+
+  override fun getFloat(key: String): Float? {
+    return getString(key)?.toFloat()
+  }
+
+  override fun saveInt(key: String, value: Int) {
+    return saveString(key, value.toString())
+  }
+
+  override fun getInt(key: String): Int? {
+    return getString(key)?.toInt()
+  }
+
   private fun initializeKeystore(): KeyStore {
     keystore = KeyStore.getInstance(keystoreProviderName)
     keystore.load(null)
@@ -134,6 +201,9 @@ class KCryptAndroid : KCrypt {
   private fun decryptDataAsymmetric(alias: String, data: String): String {
     val key = getAsymmetricKey(alias)
 
+    Exception().printStackTrace()
+    println("the data is $data")
+
     val parts = data.split(",")
 
     val plainTextByteArray = Base64.getDecoder().decode(parts[0])
@@ -151,7 +221,7 @@ class KCryptAndroid : KCrypt {
 
   private fun saveEncodedKey(key: String, isHexString: Boolean) {
     getRealm().writeBlocking {
-      deleteAll()
+      delete(KCryptEntity::class)
       copyToRealm(KCryptEntity().apply {
         println("save $key")
         encodedKey = key
@@ -168,12 +238,21 @@ class KCryptAndroid : KCrypt {
 
   private fun getRealm(): Realm {
     if (realm == null) {
+      println("migration -111")
+
       val configuration = RealmConfiguration
         .Builder(
           schema = setOf(
             KCryptEntity::class,
+            KCryptStorageItemEntity::class
           )
         )
+        .schemaVersion(2)
+        .migration(object : AutomaticSchemaMigration {
+          override fun migrate(migrationContext: AutomaticSchemaMigration.MigrationContext) {
+
+          }
+        })
         .name(realmName)
         .build()
       realm = Realm.open(configuration)
@@ -199,6 +278,26 @@ class KCryptAndroid : KCrypt {
         println("the value to save is $this")
       }
   }
+
+  private fun hexStringToNormalString(hexString: String): String {
+    val hexChars = hexString.toCharArray()
+    val byteArray = ByteArray(hexChars.size / 2)
+
+    for (i in hexChars.indices step 2) {
+      val firstDigit = Character.digit(hexChars[i], 16)
+      val secondDigit = Character.digit(hexChars[i + 1], 16)
+
+      if (firstDigit == -1 || secondDigit == -1) {
+        throw IllegalArgumentException("Invalid hex string")
+      }
+
+      val combinedByte = (firstDigit shl 4) + secondDigit
+      byteArray[i / 2] = combinedByte.toByte()
+    }
+
+    return String(byteArray, Charsets.UTF_8)
+  }
+
 }
 
 actual fun getKCrypt(): KCrypt = KCryptAndroid()
