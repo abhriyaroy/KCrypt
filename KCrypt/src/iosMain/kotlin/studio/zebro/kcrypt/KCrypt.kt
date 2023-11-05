@@ -39,7 +39,6 @@ class KCryptIos : KCrypt {
   override fun getEncryptionKey(keySize: Int): ByteArray? {
     val preStoredEncryptionKey = value(forKey = keyName)
     return if (preStoredEncryptionKey != null) {
-      println("pre stored key available")
       hexStringToByteArray(preStoredEncryptionKey.stringValue.let {
         deSerialize(it)
           .let {
@@ -51,7 +50,6 @@ class KCryptIos : KCrypt {
           }
       })
     } else {
-      println("pre stored key not available")
       val newEncryptionKey = generateRandomByteArray(keySize)
       addOrUpdate(
         keyName, KCryptKeychainEntity(byteArrayToHexString(newEncryptionKey), false)
@@ -90,7 +88,6 @@ class KCryptIos : KCrypt {
   }
 
   override fun hexStringToByteArray(hexString: String): ByteArray? {
-    println("final hexStringToByteArray")
     val result = ByteArray(hexString.length / 2)
     for (i in hexString.indices step 2) {
       val byte = hexString.substring(i, i + 2).toInt(16).toByte()
@@ -143,20 +140,16 @@ class KCryptIos : KCrypt {
 
   private fun addOrUpdate(key: String, value: KCryptKeychainEntity): Boolean {
     return if (existsObject(key)) {
-      println("addOrUpdate: update")
       update(key, value.toNsData())
     } else {
-      println("addOrUpdate: add")
       add(key, value.toNsData())
     }
   }
 
   private fun addOrUpdate(key: String, value: String): Boolean {
     return if (existsObject(key)) {
-      println("addOrUpdate: update")
       update(key, value.toNSData())
     } else {
-      println("addOrUpdate: add")
       add(key, value.toNSData())
     }
   }
@@ -168,12 +161,10 @@ class KCryptIos : KCrypt {
       kSecValueData to data,
       kSecAttrAccessible to accessibility.value
     )
-    println("query: ${query.toString()}")
     SecItemAdd(query, null).validate()
   }
 
   private fun update(key: String, value: Any?): Boolean = context(key, value) { (account, data) ->
-    println("update: $account, $data")
     val query = query(
       kSecClass to kSecClassGenericPassword,
       kSecAttrAccount to account,
@@ -183,7 +174,6 @@ class KCryptIos : KCrypt {
     val updateQuery = query(
       kSecValueData to data
     )
-    println("update done : $account, $data")
     SecItemUpdate(query, updateQuery).validate()
   }
 
@@ -244,10 +234,7 @@ class KCryptIos : KCrypt {
     get() = NSString.create(this, NSUTF8StringEncoding) as String
 
   private fun OSStatus.validate(): Boolean {
-    println("status: $this")
-    return (this.toUInt() == noErr).apply {
-      if (!this) println("Error: $this")
-    }
+    return (this.toUInt() == noErr)
   }
 
   private fun generateRandomByteArray(length: Int): ByteArray {

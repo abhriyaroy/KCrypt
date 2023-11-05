@@ -48,7 +48,6 @@ class KCryptAndroid : KCrypt {
 
   override fun getEncryptionKeyToHexString(keySize: Int): String {
     return getEncryptionKey(keySize)?.let {
-      println("saved final $it")
       byteArrayToHexString(it)
     } ?: "NA"
   }
@@ -104,7 +103,6 @@ class KCryptAndroid : KCrypt {
     ).run {
       getRealm().writeBlocking {
         copyToRealm(KCryptStorageItemEntity().apply {
-          println("save primary $key")
           this.key = key
           this.value = this@run
         }, updatePolicy = UpdatePolicy.ALL)
@@ -116,7 +114,6 @@ class KCryptAndroid : KCrypt {
     initializeKeystore()
     return decryptDataAsymmetric(keyAlias,
       getRealm().query(KCryptStorageItemEntity::class).find().filter { it.key == key }.let {
-        println("get saved key value $this")
         it.first().value as String
       }).let {
       hexStringToNormalString(it)
@@ -164,6 +161,16 @@ class KCryptAndroid : KCrypt {
   }
 
   private fun generateSymmetricKey(alias: String): Key {
+    var existingKey: Key? = null
+    try {
+      existingKey = getAsymmetricKey(alias)
+    } catch (exception: NullPointerException) {
+
+    }
+    if (existingKey != null) {
+      return existingKey
+    }
+
     // Specify the algorithm to be used
     val generator = KeyGenerator.getInstance(
       KeyProperties.KEY_ALGORITHM_AES,
@@ -202,7 +209,6 @@ class KCryptAndroid : KCrypt {
     val key = getAsymmetricKey(alias)
 
     Exception().printStackTrace()
-    println("the data is $data")
 
     val parts = data.split(",")
 
@@ -214,16 +220,13 @@ class KCryptAndroid : KCrypt {
     cipher.init(Cipher.DECRYPT_MODE, key, IvParameterSpec(iv))
     val cipherText = cipher.doFinal(plainTextByteArray)
 
-    return cipherText.toString(Charset.defaultCharset()).apply {
-      println("got saved key $this")
-    }
+    return cipherText.toString(Charset.defaultCharset())
   }
 
   private fun saveEncodedKey(key: String, isHexString: Boolean) {
     getRealm().writeBlocking {
       delete(KCryptEntity::class)
       copyToRealm(KCryptEntity().apply {
-        println("save $key")
         encodedKey = key
         isStringInHex = isHexString
       })
@@ -231,14 +234,11 @@ class KCryptAndroid : KCrypt {
   }
 
   private fun getEncodedKey(): KCryptEntity {
-    return getRealm().query(KCryptEntity::class).find().first().apply {
-      println("get saved key $this")
-    }
+    return getRealm().query(KCryptEntity::class).find().first()
   }
 
   private fun getRealm(): Realm {
     if (realm == null) {
-      println("migration -111")
 
       val configuration = RealmConfiguration
         .Builder(
@@ -274,9 +274,6 @@ class KCryptAndroid : KCrypt {
       stringBuilder.append(hexString)
     }
     return stringBuilder.toString()
-      .apply {
-        println("the value to save is $this")
-      }
   }
 
   private fun hexStringToNormalString(hexString: String): String {
