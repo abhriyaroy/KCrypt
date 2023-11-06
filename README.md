@@ -8,9 +8,9 @@ KCrypt is a Kotlin Multiplatform Mobile (KMM) library that provides a secure and
 
 - Secure Key Generation: KCrypt handles the generation of secure encryption keys based on platform-specific best practices and provides you with a unique key that persists as long as the app stays installed.
 - Cross-Platform Compatibility: Build multiplatform applications with shared encryption logic that works consistently on iOS and Android.
+- Storage of encrypted key-value pairs
 
 ## Upcoming features
-- Storage of key-value pairs securely.
 - Ability to maintain multiple keys.
 
 ## Use case
@@ -33,6 +33,19 @@ val config = RealmConfiguration
 ```
 We need to provide a key to the `encryptionKey()` method. Here comes KCrypt which provides a unique secure key across Android and iOS, that can be passed to the `encryptionKey()` method. Similarly, KCrypt can be used for other encryption/cryptographic purposes where one needs an encryption key.
 
+Or
+
+If you want to store data using key value pairs in an encrypted format, KCrypt is here for you.
+For example:
+If we want to store a value how we would normally store in encrypted shared preferences or keychain, we can do so as follows:
+
+```kotlin
+
+getKCrypt().saveString("stringVal", "my sample string")
+val storedString = getKCrypt().getString("stringVal") // returns "my sample string"
+
+```
+
 ## Usage
 
 To get started with KCrypt in your KMM project, follow these steps:
@@ -54,6 +67,8 @@ kotlin {
 
 2. Use KCrypt in your shared code:
 
+- For Encryption key:
+
 ```kotlin
 // Shared code
 import studio.zebro.kcrypt.getKCrypt
@@ -74,6 +89,41 @@ val convertedByteArrayInString : String = kCrypt.byteArrayToHexString(encryption
 
 // to convert hex string to byte array
 val convertedStringInByteArray : ByteArray = kCrypt.hexStringToByteArray(encryptionkeyInString)
+
+```
+  - For Key-Value pairs:
+
+```kotlin
+// Shared code
+import studio.zebro.kcrypt.getKCrypt
+
+val kCrypt = getKCrypt()
+
+// save string value
+kCrypt.saveString("stringVal", "my string")
+// retrieve saved string value
+kCrypt.getString("stringVal")
+
+// save int value
+kCrypt.saveInt("intVal", 101)
+// retrieve saved int value
+kCrypt..getInt("intVal")
+
+// save float value
+kCrypt.saveFloat("floatVal", 100.5f)
+// retrieve float value
+kCrypt.getFloat("floatVal")
+
+// save double value
+kCrypt.saveDouble("doubleVal", 599.4)
+// retrieve double value
+kCrypt.getDouble("doubleVal")
+
+// save boolean value
+kCrypt.saveBoolean("booleanVal", true)
+// retrieve boolean value
+kCrypt.getBoolean("booleanVal")
+
 ```
 
 
