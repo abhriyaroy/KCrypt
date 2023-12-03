@@ -138,6 +138,14 @@ class KCryptIos : KCrypt {
     return value(key)?.stringValue?.toInt()
   }
 
+  override fun saveLong(key: String, value: Long) {
+    addOrUpdate(key, value.toString())
+  }
+
+  override fun getLong(key: String): Long? {
+    return value(key)?.stringValue?.toLong()
+  }
+
   private fun addOrUpdate(key: String, value: KCryptKeychainEntity): Boolean {
     return if (existsObject(key)) {
       update(key, value.toNsData())

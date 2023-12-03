@@ -1,33 +1,24 @@
 package studio.zebro.kcrypt
 
 import KCryptEntity
-import android.security.keystore.KeyGenParameterSpec
-import android.security.keystore.KeyProperties
-import io.realm.kotlin.Realm
-import io.realm.kotlin.RealmConfiguration
-import io.realm.kotlin.UpdatePolicy
-import io.realm.kotlin.migration.AutomaticSchemaMigration
-import io.realm.kotlin.migration.RealmMigration
 import studio.zebro.kcrypt.entity.KCryptStorageItemEntity
 import java.nio.charset.Charset
-import java.security.Key
-import java.security.KeyStore
 import java.security.SecureRandom
 import java.util.*
-import javax.crypto.Cipher
-import javax.crypto.KeyGenerator
-import javax.crypto.spec.IvParameterSpec
 
-class KCryptAndroid : KCrypt {
+class KCryptAndroid(
+  private val keyStoreManager: KeyStoreManager,
+  private val cipherProvider: CipherProvider,
+  private val storageProvider: StorageProvider
+) : KCrypt {
+
   private val keyAlias = "encryption_key"
-  private lateinit var keystore: KeyStore
-  private var realm: Realm? = null
-  private val keystoreProviderName = "AndroidKeyStore"
-  private val realmName = "krypt.realm"
 
   override fun getEncryptionKey(keySize: Int): ByteArray? {
-    initializeKeystore()
-    return if (keystore.containsAlias(keyAlias)) {
+    println("$00")
+    keyStoreManager.initializeKeystore()
+    println("$01")
+    return if (keyStoreManager.containsAlias(keyAlias)) {
       hexStringToByteArray(
         decryptDataAsymmetric(keyAlias,
           getEncodedKey().let {
@@ -39,8 +30,11 @@ class KCryptAndroid : KCrypt {
           })
       )
     } else {
-      generateSymmetricKey(keyAlias)
+      println("$10")
+      keyStoreManager.generateSymmetricKey(keyAlias)
+      println("$11")
       val cipherKey = generate64ByteByteArray(keySize)
+      println("cipher key = ${cipherKey.size}")
       saveEncodedKey(encryptDataAsymmetric(keyAlias, byteArrayToHexString(cipherKey)), true)
       cipherKey
     }
@@ -53,14 +47,14 @@ class KCryptAndroid : KCrypt {
   }
 
   override fun saveEncryptionKey(key: ByteArray) {
-    initializeKeystore()
-    generateSymmetricKey(keyAlias)
+    keyStoreManager.initializeKeystore()
+    keyStoreManager.generateSymmetricKey(keyAlias)
     saveEncodedKey(encryptDataAsymmetric(keyAlias, byteArrayToHexString(key)), false)
   }
 
   override fun saveEncryptionKey(key: String, isHexString: Boolean) {
-    initializeKeystore()
-    generateSymmetricKey(keyAlias)
+    keyStoreManager.initializeKeystore()
+    keyStoreManager.generateSymmetricKey(keyAlias)
     saveEncodedKey(
       encryptDataAsymmetric(
         keyAlias,
@@ -79,43 +73,41 @@ class KCryptAndroid : KCrypt {
   }
 
   override fun hexStringToByteArray(hexString: String): ByteArray? {
-    val cleanHexString = hexString.replace(" ", "") // Remove spaces if present
+    val cleanHexString = hexString.replace(" ", "")
     val byteArray = ByteArray(cleanHexString.length / 2)
 
-    try {
+    return try {
       for (i in cleanHexString.indices step 2) {
         val byteValue = cleanHexString.substring(i, i + 2).toInt(16)
         byteArray[i / 2] = byteValue.toByte()
       }
-      return byteArray
+      byteArray
     } catch (e: NumberFormatException) {
       // Handle invalid hex string format
       e.printStackTrace()
-      return null
+      null
     }
   }
 
   override fun saveString(key: String, value: String) {
-    initializeKeystore()
+    keyStoreManager.initializeKeystore()
     encryptDataAsymmetric(
       keyAlias,
       stringToHex(value)
     ).run {
-      getRealm().writeBlocking {
-        copyToRealm(KCryptStorageItemEntity().apply {
+      storageProvider.writeItemToStorage(
+        KCryptStorageItemEntity().apply {
           this.key = key
           this.value = this@run
-        }, updatePolicy = UpdatePolicy.ALL)
-      }
+        }
+      )
     }
   }
 
   override fun getString(key: String): String? {
-    initializeKeystore()
+    keyStoreManager.initializeKeystore()
     return decryptDataAsymmetric(keyAlias,
-      getRealm().query(KCryptStorageItemEntity::class).find().filter { it.key == key }.let {
-        it.first().value as String
-      }).let {
+      storageProvider.getItemFromStorage(key)).let {
       hexStringToNormalString(it)
     }
   }
@@ -154,110 +146,38 @@ class KCryptAndroid : KCrypt {
     return getString(key)?.toInt()
   }
 
-  private fun initializeKeystore(): KeyStore {
-    keystore = KeyStore.getInstance(keystoreProviderName)
-    keystore.load(null)
-    return keystore
+  override fun saveLong(key: String, value: Long) {
+    return saveString(key, value.toString())
   }
 
-  private fun generateSymmetricKey(alias: String): Key {
-    var existingKey: Key? = null
-    try {
-      existingKey = getAsymmetricKey(alias)
-    } catch (exception: NullPointerException) {
-
-    }
-    if (existingKey != null) {
-      return existingKey
-    }
-
-    // Specify the algorithm to be used
-    val generator = KeyGenerator.getInstance(
-      KeyProperties.KEY_ALGORITHM_AES,
-      keystoreProviderName
-    )
-    val generatorSpec = KeyGenParameterSpec.Builder(
-      alias,
-      KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
-    )
-      .setBlockModes(KeyProperties.BLOCK_MODE_CBC)
-      .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_PKCS7)
-
-    generator.init(generatorSpec.build())
-    return generator.generateKey()
-  }
-
-  private fun getAsymmetricKey(alias: String): Key {
-    return keystore.getKey(alias, CharArray(0))
+  override fun getLong(key: String): Long? {
+    return getString(key)?.toLong()
   }
 
   private fun encryptDataAsymmetric(alias: String, data: String): String {
-    val key = getAsymmetricKey(alias)
+    val key = keyStoreManager.getAsymmetricKey(alias)
     val plainTextByteArray = data.toByteArray(Charset.defaultCharset())
-
-    val cipher = Cipher.getInstance("AES/CBC/PKCS7Padding")
-    cipher.init(Cipher.ENCRYPT_MODE, key)
-    val cipherText = cipher.doFinal(plainTextByteArray)
-
-    return Base64.getEncoder()
-      .encodeToString(cipherText) +
-        "," +
-        Base64.getEncoder().encodeToString(cipher.iv)
+    return cipherProvider.encrypt(plainTextByteArray, key)
   }
 
   private fun decryptDataAsymmetric(alias: String, data: String): String {
-    val key = getAsymmetricKey(alias)
+    val key = keyStoreManager.getAsymmetricKey(alias)
 
-    Exception().printStackTrace()
-
-    val parts = data.split(",")
-
-    val plainTextByteArray = Base64.getDecoder().decode(parts[0])
-
-    val iv = Base64.getDecoder().decode(parts[1])
-
-    val cipher = Cipher.getInstance("AES/CBC/PKCS7Padding")
-    cipher.init(Cipher.DECRYPT_MODE, key, IvParameterSpec(iv))
-    val cipherText = cipher.doFinal(plainTextByteArray)
+    val cipherText = cipherProvider.decrypt(key, data)
 
     return cipherText.toString(Charset.defaultCharset())
   }
 
   private fun saveEncodedKey(key: String, isHexString: Boolean) {
-    getRealm().writeBlocking {
-      delete(KCryptEntity::class)
-      copyToRealm(KCryptEntity().apply {
-        encodedKey = key
-        isStringInHex = isHexString
-      })
-    }
+    println("$key and $isHexString")
+    storageProvider.writeKey(KCryptEntity().apply {
+      encodedKey = key
+      isStringInHex = isHexString
+    })
   }
 
   private fun getEncodedKey(): KCryptEntity {
-    return getRealm().query(KCryptEntity::class).find().first()
-  }
-
-  private fun getRealm(): Realm {
-    if (realm == null) {
-
-      val configuration = RealmConfiguration
-        .Builder(
-          schema = setOf(
-            KCryptEntity::class,
-            KCryptStorageItemEntity::class
-          )
-        )
-        .schemaVersion(2)
-        .migration(object : AutomaticSchemaMigration {
-          override fun migrate(migrationContext: AutomaticSchemaMigration.MigrationContext) {
-
-          }
-        })
-        .name(realmName)
-        .build()
-      realm = Realm.open(configuration)
-    }
-    return realm!!
+    return storageProvider.getKey()
   }
 
   private fun generate64ByteByteArray(keySize: Int): ByteArray {
@@ -297,4 +217,4 @@ class KCryptAndroid : KCrypt {
 
 }
 
-actual fun getKCrypt(): KCrypt = KCryptAndroid()
+actual fun getKCrypt(): KCrypt = KCryptAndroid(KeyStoreManagerImpl(), CipherProviderImpl(), StorageProviderImpl())
