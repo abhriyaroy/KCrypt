@@ -19,25 +19,15 @@ import platform.posix.arc4random_buf
 import studio.zebro.kcrypt.entity.KCryptKeychainEntity
 
 @OptIn(ExperimentalForeignApi::class)
-class KCryptIos : KCrypt {
+class KCryptIos(
+  private val iosPlatformHelper: IosPlatformHelper,
+  private val keystoreManager: KeystoreManager
+) : KCrypt {
 
-  val serviceName: String = "studio.zebro.kcrypt"
-  val keyName: String = "KCryptKey"
-
-  val accessibility: Accessible = Accessible.WhenUnlocked
-
-  enum class Accessible(val value: CFStringRef?) {
-    WhenPasscodeSetThisDeviceOnly(kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly), WhenUnlockedThisDeviceOnly(
-      kSecAttrAccessibleWhenUnlockedThisDeviceOnly
-    ),
-    WhenUnlocked(kSecAttrAccessibleWhenUnlocked), AfterFirstUnlock(
-      kSecAttrAccessibleAfterFirstUnlock
-    ),
-    AfterFirstUnlockThisDeviceOnly(kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly)
-  }
+  private val keyName: String = "KCryptKey"
 
   override fun getEncryptionKey(keySize: Int): ByteArray? {
-    val preStoredEncryptionKey = value(forKey = keyName)
+    val preStoredEncryptionKey = keystoreManager.value(forKey = keyName)
     return if (preStoredEncryptionKey != null) {
       hexStringToByteArray(preStoredEncryptionKey.stringValue.let {
         deSerialize(it)
@@ -50,7 +40,7 @@ class KCryptIos : KCrypt {
           }
       })
     } else {
-      val newEncryptionKey = generateRandomByteArray(keySize)
+      val newEncryptionKey = iosPlatformHelper.generateRandomByteArray(keySize)
       addOrUpdate(
         keyName, KCryptKeychainEntity(byteArrayToHexString(newEncryptionKey), false)
       )
@@ -101,7 +91,7 @@ class KCryptIos : KCrypt {
   }
 
   override fun getString(key: String): String? {
-    return value(key)?.stringValue
+    return keystoreManager.value(key)?.stringValue
   }
 
   override fun saveBoolean(key: String, value: Boolean) {
@@ -109,7 +99,7 @@ class KCryptIos : KCrypt {
   }
 
   override fun getBoolean(key: String): Boolean? {
-    return value(key)?.let {
+    return keystoreManager.value(key)?.let {
       it.stringValue.equals("true", true)
     }
   }
@@ -119,7 +109,7 @@ class KCryptIos : KCrypt {
   }
 
   override fun getDouble(key: String): Double? {
-    return value(key)?.stringValue?.toDouble()
+    return keystoreManager.value(key)?.stringValue?.toDouble()
   }
 
   override fun saveFloat(key: String, value: Float) {
@@ -127,7 +117,7 @@ class KCryptIos : KCrypt {
   }
 
   override fun getFloat(key: String): Float? {
-    return value(key)?.stringValue?.toFloat()
+    return keystoreManager.value(key)?.stringValue?.toFloat()
   }
 
   override fun saveInt(key: String, value: Int) {
@@ -135,7 +125,7 @@ class KCryptIos : KCrypt {
   }
 
   override fun getInt(key: String): Int? {
-    return value(key)?.stringValue?.toInt()
+    return keystoreManager.value(key)?.stringValue?.toInt()
   }
 
   override fun saveLong(key: String, value: Long) {
@@ -143,95 +133,22 @@ class KCryptIos : KCrypt {
   }
 
   override fun getLong(key: String): Long? {
-    return value(key)?.stringValue?.toLong()
+    return keystoreManager.value(key)?.stringValue?.toLong()
   }
 
   private fun addOrUpdate(key: String, value: KCryptKeychainEntity): Boolean {
-    return if (existsObject(key)) {
-      update(key, value.toNsData())
+    return if (keystoreManager.existsObject(key)) {
+      keystoreManager.update(key, value.toNsData())
     } else {
-      add(key, value.toNsData())
+      keystoreManager.add(key, value.toNsData())
     }
   }
 
   private fun addOrUpdate(key: String, value: String): Boolean {
-    return if (existsObject(key)) {
-      update(key, value.toNSData())
+    return if (keystoreManager.existsObject(key)) {
+      keystoreManager.update(key, value.toNSData())
     } else {
-      add(key, value.toNSData())
-    }
-  }
-
-  private fun add(key: String, value: NSData?): Boolean = context(key, value) { (account, data) ->
-    val query = query(
-      kSecClass to kSecClassGenericPassword,
-      kSecAttrAccount to account,
-      kSecValueData to data,
-      kSecAttrAccessible to accessibility.value
-    )
-    SecItemAdd(query, null).validate()
-  }
-
-  private fun update(key: String, value: Any?): Boolean = context(key, value) { (account, data) ->
-    val query = query(
-      kSecClass to kSecClassGenericPassword,
-      kSecAttrAccount to account,
-      kSecReturnData to kCFBooleanFalse,
-    )
-
-    val updateQuery = query(
-      kSecValueData to data
-    )
-    SecItemUpdate(query, updateQuery).validate()
-  }
-
-  private fun value(forKey: String): NSData? = context(forKey) { (account) ->
-    val query = query(
-      kSecClass to kSecClassGenericPassword,
-      kSecAttrAccount to account,
-      kSecReturnData to kCFBooleanTrue,
-      kSecMatchLimit to kSecMatchLimitOne,
-    )
-
-    memScoped {
-      val result = alloc<CFTypeRefVar>()
-      SecItemCopyMatching(query, result.ptr)
-      CFBridgingRelease(result.value) as? NSData
-    }
-  }
-
-  private fun existsObject(forKey: String): Boolean = context(forKey) { (account) ->
-    val query = query(
-      kSecClass to kSecClassGenericPassword,
-      kSecAttrAccount to account,
-      kSecReturnData to kCFBooleanFalse,
-    )
-
-    SecItemCopyMatching(query, null).validate()
-  }
-
-
-  private class Context(val refs: Map<CFStringRef?, CFTypeRef?>) {
-    fun query(vararg pairs: Pair<CFStringRef?, CFTypeRef?>): CFDictionaryRef? {
-      val map = mapOf(*pairs).plus(refs.filter { it.value != null })
-      return CFDictionaryCreateMutable(
-        null, map.size.convert(), null, null
-      ).apply {
-        map.entries.forEach { CFDictionaryAddValue(this, it.key, it.value) }
-      }.apply {
-        CFAutorelease(this)
-      }
-    }
-  }
-
-  private fun <T> context(vararg values: Any?, block: Context.(List<CFTypeRef?>) -> T): T {
-    val standard = mapOf(
-      kSecAttrService to CFBridgingRetain(serviceName),
-      kSecAttrAccessGroup to CFBridgingRetain(null)
-    )
-    val custom = arrayOf(*values).map { CFBridgingRetain(it) }
-    return block.invoke(Context(standard), custom).apply {
-      standard.values.plus(custom).forEach { CFBridgingRelease(it) }
+      keystoreManager.add(key, value.toNSData())
     }
   }
 
@@ -240,16 +157,6 @@ class KCryptIos : KCrypt {
 
   private val NSData.stringValue: String
     get() = NSString.create(this, NSUTF8StringEncoding) as String
-
-  private fun OSStatus.validate(): Boolean {
-    return (this.toUInt() == noErr)
-  }
-
-  private fun generateRandomByteArray(length: Int): ByteArray {
-    val byteArray = ByteArray(length)
-    arc4random_buf(byteArray.refTo(0), byteArray.size.convert())
-    return byteArray
-  }
 
   private fun stringToHex(input: String): String {
     memScoped {
@@ -282,5 +189,9 @@ class KCryptIos : KCrypt {
 
 }
 
+var kCryptInstance: KCrypt? = null
 
-actual fun getKCrypt(): KCrypt = KCryptIos()
+actual fun getKCrypt(): KCrypt =
+  kCryptInstance ?: KCryptIos(IosPlatformHelperImpl(), KeystoreManagerImpl()).apply {
+    kCryptInstance = this
+  }

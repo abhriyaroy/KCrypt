@@ -20,14 +20,13 @@ class KCryptAndroid(
     println("$01")
     return if (keyStoreManager.containsAlias(keyAlias)) {
       hexStringToByteArray(
-        decryptDataAsymmetric(keyAlias,
-          getEncodedKey().let {
-            if (it.isStringInHex) {
-              it.encodedKey
-            } else {
-              stringToHex(it.encodedKey)
-            }
-          })
+        decryptDataAsymmetric(keyAlias, getEncodedKey().let {
+          if (it.isStringInHex) {
+            it.encodedKey
+          } else {
+            stringToHex(it.encodedKey)
+          }
+        })
       )
     } else {
       println("$10")
@@ -63,8 +62,7 @@ class KCryptAndroid(
         } else {
           stringToHex(key)
         },
-      ),
-      isHexString = true
+      ), isHexString = true
     )
   }
 
@@ -92,22 +90,20 @@ class KCryptAndroid(
   override fun saveString(key: String, value: String) {
     keyStoreManager.initializeKeystore()
     encryptDataAsymmetric(
-      keyAlias,
-      stringToHex(value)
+      keyAlias, stringToHex(value)
     ).run {
-      storageProvider.writeItemToStorage(
-        KCryptStorageItemEntity().apply {
-          this.key = key
-          this.value = this@run
-        }
-      )
+      storageProvider.writeItemToStorage(KCryptStorageItemEntity().apply {
+        this.key = key
+        this.value = this@run
+      })
     }
   }
 
   override fun getString(key: String): String? {
     keyStoreManager.initializeKeystore()
-    return decryptDataAsymmetric(keyAlias,
-      storageProvider.getItemFromStorage(key)).let {
+    return decryptDataAsymmetric(
+      keyAlias, storageProvider.getItemFromStorage(key)
+    ).let {
       hexStringToNormalString(it)
     }
   }
@@ -217,4 +213,10 @@ class KCryptAndroid(
 
 }
 
-actual fun getKCrypt(): KCrypt = KCryptAndroid(KeyStoreManagerImpl(), CipherProviderImpl(), StorageProviderImpl())
+var kCryptInstance: KCrypt? = null
+actual fun getKCrypt(): KCrypt =
+  kCryptInstance ?: KCryptAndroid(
+    KeyStoreManagerImpl(), CipherProviderImpl(), StorageProviderImpl()
+  ).apply {
+    kCryptInstance = this
+  }
