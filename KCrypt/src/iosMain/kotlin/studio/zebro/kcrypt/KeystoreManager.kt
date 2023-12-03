@@ -6,6 +6,7 @@ import kotlinx.cinterop.convert
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.value
+import kotlinx.serialization.json.Json
 import platform.CoreFoundation.CFAutorelease
 import platform.CoreFoundation.CFDictionaryAddValue
 import platform.CoreFoundation.CFDictionaryCreateMutable
@@ -18,6 +19,10 @@ import platform.CoreFoundation.kCFBooleanTrue
 import platform.Foundation.CFBridgingRelease
 import platform.Foundation.CFBridgingRetain
 import platform.Foundation.NSData
+import platform.Foundation.NSString
+import platform.Foundation.NSUTF8StringEncoding
+import platform.Foundation.create
+import platform.Foundation.dataUsingEncoding
 import platform.Security.SecItemAdd
 import platform.Security.SecItemCopyMatching
 import platform.Security.SecItemUpdate
@@ -37,20 +42,22 @@ import platform.Security.kSecMatchLimitOne
 import platform.Security.kSecReturnData
 import platform.Security.kSecValueData
 import platform.darwin.OSStatus
-import platform.darwin.noErr
+import studio.zebro.kcrypt.entity.KCryptKeychainEntity
 
 interface KeystoreManager {
   fun existsObject(forKey: String): Boolean
 
-  fun add(key: String, value: NSData?): Boolean
+  fun add(key: String, value: KCryptKeychainEntity): Boolean
+  fun add(key: String, value: String): Boolean
 
-  fun update(key: String, value: Any?): Boolean
+  fun update(key: String, value: KCryptKeychainEntity): Boolean
+  fun update(key: String, value: String): Boolean
 
-  fun value(forKey: String): NSData?
+  fun value(forKey: String): String?
 }
 
 @OptIn(ExperimentalForeignApi::class)
-class KeystoreManagerImpl  : KeystoreManager {
+class KeystoreManagerImpl : KeystoreManager {
 
   val serviceName: String = "studio.zebro.kcrypt"
 
@@ -76,30 +83,57 @@ class KeystoreManagerImpl  : KeystoreManager {
     SecItemCopyMatching(query, null).validate()
   }
 
-  override fun add(key: String, value: NSData?): Boolean = context(key, value) { (account, data) ->
-    val query = query(
-      kSecClass to kSecClassGenericPassword,
-      kSecAttrAccount to account,
-      kSecValueData to data,
-      kSecAttrAccessible to accessibility.value
-    )
-    SecItemAdd(query, null).validate()
-  }
+  override fun add(key: String, value: KCryptKeychainEntity) =
+    context(key, value.toNsData()) { (account, data) ->
+      val query = query(
+        kSecClass to kSecClassGenericPassword,
+        kSecAttrAccount to account,
+        kSecValueData to data,
+        kSecAttrAccessible to accessibility.value
+      )
+      SecItemAdd(query, null).validate()
+    }
 
-  override fun update(key: String, value: Any?): Boolean = context(key, value) { (account, data) ->
-    val query = query(
-      kSecClass to kSecClassGenericPassword,
-      kSecAttrAccount to account,
-      kSecReturnData to kCFBooleanFalse,
-    )
+  override fun add(key: String, value: String): Boolean =
+    context(key, value.toNSData()) { (account, data) ->
+      val query = query(
+        kSecClass to kSecClassGenericPassword,
+        kSecAttrAccount to account,
+        kSecValueData to data,
+        kSecAttrAccessible to accessibility.value
+      )
+      SecItemAdd(query, null).validate()
+    }
 
-    val updateQuery = query(
-      kSecValueData to data
-    )
-    SecItemUpdate(query, updateQuery).validate()
-  }
+  override fun update(key: String, value: KCryptKeychainEntity): Boolean =
+    context(key, value.toNsData()) { (account, data) ->
+      val query = query(
+        kSecClass to kSecClassGenericPassword,
+        kSecAttrAccount to account,
+        kSecReturnData to kCFBooleanFalse,
+      )
 
-  override fun value(forKey: String): NSData? = context(forKey) { (account) ->
+      val updateQuery = query(
+        kSecValueData to data
+      )
+      SecItemUpdate(query, updateQuery).validate()
+    }
+
+  override fun update(key: String, value: String): Boolean =
+    context(key, value.toNSData()) { (account, data) ->
+      val query = query(
+        kSecClass to kSecClassGenericPassword,
+        kSecAttrAccount to account,
+        kSecReturnData to kCFBooleanFalse,
+      )
+
+      val updateQuery = query(
+        kSecValueData to data
+      )
+      SecItemUpdate(query, updateQuery).validate()
+    }
+
+  override fun value(forKey: String): String? = context(forKey) { (account) ->
     val query = query(
       kSecClass to kSecClassGenericPassword,
       kSecAttrAccount to account,
@@ -112,6 +146,8 @@ class KeystoreManagerImpl  : KeystoreManager {
       SecItemCopyMatching(query, result.ptr)
       CFBridgingRelease(result.value) as? NSData
     }
+  }.let {
+    it?.stringValue
   }
 
   private fun <T> context(vararg values: Any?, block: Context.(List<CFTypeRef?>) -> T): T {
@@ -127,6 +163,18 @@ class KeystoreManagerImpl  : KeystoreManager {
 
   private fun OSStatus.validate(): Boolean {
     return (this.toUInt() == platform.darwin.noErr)
+  }
+
+  private fun String.toNSData(): NSData? =
+    NSString.create(string = this).dataUsingEncoding(NSUTF8StringEncoding)
+
+  private val NSData.stringValue: String
+    get() = NSString.create(this, NSUTF8StringEncoding) as String
+
+  private fun KCryptKeychainEntity.toNsData(): NSData {
+    val json = Json { isLenient = true; ignoreUnknownKeys = true }
+    return NSString.create(string = json.encodeToString(KCryptKeychainEntity.serializer(), this))
+      .dataUsingEncoding(NSUTF8StringEncoding) ?: NSData()
   }
 
   private class Context(val refs: Map<CFStringRef?, CFTypeRef?>) {

@@ -4,7 +4,6 @@ import KCryptEntity
 import studio.zebro.kcrypt.entity.KCryptStorageItemEntity
 import java.nio.charset.Charset
 import java.security.SecureRandom
-import java.util.*
 
 class KCryptAndroid(
   private val keyStoreManager: KeyStoreManager,

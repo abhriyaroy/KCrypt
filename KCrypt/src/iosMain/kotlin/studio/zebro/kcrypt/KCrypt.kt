@@ -29,7 +29,7 @@ class KCryptIos(
   override fun getEncryptionKey(keySize: Int): ByteArray? {
     val preStoredEncryptionKey = keystoreManager.value(forKey = keyName)
     return if (preStoredEncryptionKey != null) {
-      hexStringToByteArray(preStoredEncryptionKey.stringValue.let {
+      hexStringToByteArray(preStoredEncryptionKey.let {
         deSerialize(it)
           .let {
             if (it.isStringInHex) {
@@ -91,7 +91,7 @@ class KCryptIos(
   }
 
   override fun getString(key: String): String? {
-    return keystoreManager.value(key)?.stringValue
+    return keystoreManager.value(key)
   }
 
   override fun saveBoolean(key: String, value: Boolean) {
@@ -100,7 +100,7 @@ class KCryptIos(
 
   override fun getBoolean(key: String): Boolean? {
     return keystoreManager.value(key)?.let {
-      it.stringValue.equals("true", true)
+      it.equals("true", true)
     }
   }
 
@@ -109,7 +109,7 @@ class KCryptIos(
   }
 
   override fun getDouble(key: String): Double? {
-    return keystoreManager.value(key)?.stringValue?.toDouble()
+    return keystoreManager.value(key)?.toDouble()
   }
 
   override fun saveFloat(key: String, value: Float) {
@@ -117,7 +117,7 @@ class KCryptIos(
   }
 
   override fun getFloat(key: String): Float? {
-    return keystoreManager.value(key)?.stringValue?.toFloat()
+    return keystoreManager.value(key)?.toFloat()
   }
 
   override fun saveInt(key: String, value: Int) {
@@ -125,7 +125,7 @@ class KCryptIos(
   }
 
   override fun getInt(key: String): Int? {
-    return keystoreManager.value(key)?.stringValue?.toInt()
+    return keystoreManager.value(key)?.toInt()
   }
 
   override fun saveLong(key: String, value: Long) {
@@ -133,30 +133,24 @@ class KCryptIos(
   }
 
   override fun getLong(key: String): Long? {
-    return keystoreManager.value(key)?.stringValue?.toLong()
+    return keystoreManager.value(key)?.toLong()
   }
 
   private fun addOrUpdate(key: String, value: KCryptKeychainEntity): Boolean {
     return if (keystoreManager.existsObject(key)) {
-      keystoreManager.update(key, value.toNsData())
+      keystoreManager.update(key, value)
     } else {
-      keystoreManager.add(key, value.toNsData())
+      keystoreManager.add(key, value)
     }
   }
 
   private fun addOrUpdate(key: String, value: String): Boolean {
     return if (keystoreManager.existsObject(key)) {
-      keystoreManager.update(key, value.toNSData())
+      keystoreManager.update(key, value)
     } else {
-      keystoreManager.add(key, value.toNSData())
+      keystoreManager.add(key, value)
     }
   }
-
-  private fun String.toNSData(): NSData? =
-    NSString.create(string = this).dataUsingEncoding(NSUTF8StringEncoding)
-
-  private val NSData.stringValue: String
-    get() = NSString.create(this, NSUTF8StringEncoding) as String
 
   private fun stringToHex(input: String): String {
     memScoped {
@@ -174,12 +168,6 @@ class KCryptIos(
 
       return hexString.toString()
     }
-  }
-
-  private fun KCryptKeychainEntity.toNsData(): NSData {
-    val json = Json { isLenient = true; ignoreUnknownKeys = true }
-    return NSString.create(string = json.encodeToString(KCryptKeychainEntity.serializer(), this))
-      .dataUsingEncoding(NSUTF8StringEncoding) ?: NSData()
   }
 
   private fun deSerialize(data: String): KCryptKeychainEntity {
