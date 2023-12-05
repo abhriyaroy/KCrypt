@@ -50,13 +50,13 @@ class KCryptAndroidTest {
         any()
       )
     ).thenReturn(encryptedValue)
-    whenever(mockKeyStoreManager.getAsymmetricKey(any())).thenReturn(mockKey)
+    whenever(mockKeyStoreManager.getAsymmetricKey(keyAlias)).thenReturn(mockKey)
 
     kCryptAndroid.saveString(testKey, testValue)
 
     verify(mockKeyStoreManager).initializeKeystore()
     verify(mockKeyStoreManager).getAsymmetricKey(keyAlias)
-    verify(mockCipherProvider).encrypt(eq(stringToHex(testValue).toByteArray()), any())
+    verify(mockCipherProvider).encrypt(eq(stringToHex(testValue).toByteArray()), eq(mockKey))
     verify(mockStorageProvider).writeItemToStorage(KCryptStorageItemEntity().apply {
       key = testKey
       value = encryptedValue
@@ -75,7 +75,7 @@ class KCryptAndroidTest {
         any()
       )
     ).thenReturn(encryptedValue)
-    whenever(mockKeyStoreManager.getAsymmetricKey(any())).thenReturn(mockKey)
+    whenever(mockKeyStoreManager.getAsymmetricKey(keyAlias)).thenReturn(mockKey)
 
     kCryptAndroid.saveBoolean(testKey, testValue)
 
@@ -95,7 +95,7 @@ class KCryptAndroidTest {
         any()
       )
     ).thenReturn(encryptedValue)
-    whenever(mockKeyStoreManager.getAsymmetricKey(any())).thenReturn(mockKey)
+    whenever(mockKeyStoreManager.getAsymmetricKey(keyAlias)).thenReturn(mockKey)
 
     // Test method
     kCryptAndroid.saveInt(testKey, testValue)
@@ -117,7 +117,7 @@ class KCryptAndroidTest {
         any()
       )
     ).thenReturn(encryptedValue)
-    whenever(mockKeyStoreManager.getAsymmetricKey(any())).thenReturn(mockKey)
+    whenever(mockKeyStoreManager.getAsymmetricKey(keyAlias)).thenReturn(mockKey)
 
     // Test method
     kCryptAndroid.saveDouble(testKey, testValue)
@@ -139,7 +139,7 @@ class KCryptAndroidTest {
         any()
       )
     ).thenReturn(encryptedValue)
-    whenever(mockKeyStoreManager.getAsymmetricKey(any())).thenReturn(mockKey)
+    whenever(mockKeyStoreManager.getAsymmetricKey(keyAlias)).thenReturn(mockKey)
 
     // Test method
     kCryptAndroid.saveFloat(testKey, testValue)
@@ -156,7 +156,7 @@ class KCryptAndroidTest {
 
     // Setup mock behavior
     whenever(mockCipherProvider.encrypt(eq(stringToHex(testValue.toString()).toByteArray(Charset.defaultCharset())), any())).thenReturn(encryptedValue)
-    whenever(mockKeyStoreManager.getAsymmetricKey(any())).thenReturn(mockKey)
+    whenever(mockKeyStoreManager.getAsymmetricKey(keyAlias)).thenReturn(mockKey)
 
     // Test method
     kCryptAndroid.saveLong(testKey, testValue)
@@ -288,7 +288,7 @@ class KCryptAndroidTest {
   ) {
     verify(mockKeyStoreManager).initializeKeystore()
     verify(mockKeyStoreManager).getAsymmetricKey(keyAlias)
-    verify(mockCipherProvider).encrypt(eq(testValue.toByteArray()), any())
+    verify(mockCipherProvider).encrypt(eq(testValue.toByteArray()), eq(mockKey))
     verify(mockStorageProvider).writeItemToStorage(KCryptStorageItemEntity().apply {
       key = testKey
       value = encryptedValue
@@ -302,7 +302,7 @@ class KCryptAndroidTest {
         decryptedValue
       ).toByteArray()
     )
-    whenever(mockKeyStoreManager.getAsymmetricKey(any())).thenReturn(mockKey)
+    whenever(mockKeyStoreManager.getAsymmetricKey(keyAlias)).thenReturn(mockKey)
   }
 
   private fun verifyInteractionsForGet(testKey: String, encryptedValue: String) {
