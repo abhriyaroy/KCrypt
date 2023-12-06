@@ -30,8 +30,8 @@ class KCryptAndroid(
     } else {
       println("$10")
       keyStoreManager.generateSymmetricKey(keyAlias)
-      println("$11")
-      val cipherKey = generate64ByteByteArray(keySize)
+      println("$11 $keySize")
+      val cipherKey = keyStoreManager.generate64ByteByteArray(keySize)
       println("cipher key = ${cipherKey.size}")
       saveEncodedKey(encryptDataAsymmetric(keyAlias, byteArrayToHexString(cipherKey)), true)
       cipherKey
@@ -70,6 +70,7 @@ class KCryptAndroid(
   }
 
   override fun hexStringToByteArray(hexString: String): ByteArray? {
+    println("hex string is $hexString")
     val cleanHexString = hexString.replace(" ", "")
     val byteArray = ByteArray(cleanHexString.length / 2)
 
@@ -151,14 +152,19 @@ class KCryptAndroid(
 
   private fun encryptDataAsymmetric(alias: String, data: String): String {
     val key = keyStoreManager.getAsymmetricKey(alias)
+    println("encryptDataAsymmetric plainTextByteArray1 text $data and ${data.toByteArray(Charset.defaultCharset()).size}")
     val plainTextByteArray = data.toByteArray(Charset.defaultCharset())
+    println("encryptDataAsymmetric plainTextByteArray text ${key.hashCode()} and $plainTextByteArray")
     return cipherProvider.encrypt(plainTextByteArray, key)
   }
 
   private fun decryptDataAsymmetric(alias: String, data: String): String {
+    println("decryptDataAsymmetric cipher text $alias and $data")
     val key = keyStoreManager.getAsymmetricKey(alias)
+    println("the address ${key.hashCode()} $data")
 
     val cipherText = cipherProvider.decrypt(key, data)
+    println("decryptDataAsymmetric cipher text $cipherText")
 
     return cipherText.toString(Charset.defaultCharset())
   }
@@ -173,13 +179,6 @@ class KCryptAndroid(
 
   private fun getEncodedKey(): KCryptEntity {
     return storageProvider.getKey()
-  }
-
-  private fun generate64ByteByteArray(keySize: Int): ByteArray {
-    val secureRandom = SecureRandom()
-    val byteArray = ByteArray(keySize)
-    secureRandom.nextBytes(byteArray)
-    return byteArray
   }
 
   private fun stringToHex(input: String): String {

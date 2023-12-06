@@ -4,6 +4,7 @@ import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import java.security.Key
 import java.security.KeyStore
+import java.security.SecureRandom
 import javax.crypto.KeyGenerator
 
 interface KeyStoreManager {
@@ -12,6 +13,7 @@ interface KeyStoreManager {
   fun containsAlias(alias: String): Boolean
   fun generateSymmetricKey(alias: String): Key
   fun getAsymmetricKey(alias: String): Key
+  fun generate64ByteByteArray(keySize: Int): ByteArray
 }
 
 class KeyStoreManagerImpl : KeyStoreManager {
@@ -54,6 +56,13 @@ class KeyStoreManagerImpl : KeyStoreManager {
 
   override fun getAsymmetricKey(alias: String): Key {
     return keystore.getKey(alias, CharArray(0))
+  }
+
+  override fun generate64ByteByteArray(keySize: Int): ByteArray {
+    val secureRandom = SecureRandom()
+    val byteArray = ByteArray(keySize)
+    secureRandom.nextBytes(byteArray)
+    return byteArray
   }
 
 }

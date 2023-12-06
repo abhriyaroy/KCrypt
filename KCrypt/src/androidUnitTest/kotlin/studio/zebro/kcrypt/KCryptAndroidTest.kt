@@ -1,9 +1,14 @@
 package studio.zebro.kcrypt
 
+import KCryptEntity
+import junit.framework.TestCase.assertNotNull
 import org.junit.After
+import org.junit.Assert.assertArrayEquals
 import org.junit.Before
 import org.junit.Test
 import org.mockito.Mock
+import org.mockito.Mockito.doAnswer
+import org.mockito.Mockito.`when`
 import org.mockito.MockitoAnnotations
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
@@ -31,6 +36,7 @@ class KCryptAndroidTest {
   private lateinit var kCryptAndroid: KCryptAndroid
 
   private val keyAlias = "encryption_key"
+  private val keySize = 64
 
   @Before
   fun setUp() {
@@ -274,6 +280,86 @@ class KCryptAndroidTest {
     verifyInteractionsForGet(testKey, encryptedValue)
   }
 
+  @Test
+  fun `getEncryptionKey returns key when KeyStoreManager contains alias`() {
+    val expectedKey = "encryptedKeyString"
+    val expectedKeyByteArray = expectedKey.toByteArray(Charset.defaultCharset())
+    val expectedKeyHexString = stringToHex(expectedKey)
+    val expectedHexByteArray = expectedKeyHexString.toByteArray(Charset.defaultCharset())
+    val kCryptEntity = KCryptEntity().apply {
+      encodedKey = expectedKeyHexString
+      isStringInHex = true
+    }
+
+    whenever(mockKeyStoreManager.containsAlias(keyAlias)).thenReturn(true)
+    whenever(mockKeyStoreManager.getAsymmetricKey(keyAlias)).thenReturn(mockKey)
+    whenever(mockCipherProvider.decrypt(mockKey, expectedKeyHexString)).thenReturn(expectedHexByteArray)
+    whenever(mockStorageProvider.getKey()).thenReturn(kCryptEntity)
+
+    val result = kCryptAndroid.getEncryptionKey(64)
+
+    assertNotNull(result)
+    assertArrayEquals(expectedKeyByteArray, result)
+    verify(mockKeyStoreManager).initializeKeystore()
+    verify(mockKeyStoreManager).containsAlias(eq(keyAlias))
+    verify(mockKeyStoreManager).getAsymmetricKey(eq(keyAlias))
+    verify(mockCipherProvider).decrypt(eq(mockKey), eq(expectedKeyHexString))
+    verify(mockStorageProvider).getKey()
+  }
+
+  @Test
+  fun `getEncryptionKey returns key when KeyStoreManager contains alias and isStringInHex is false`() {
+    val rawKeyString = "rawKeyString"
+    val rawKeyStringByteArray = rawKeyString.toByteArray(Charset.defaultCharset())
+    val rawKeyStringHex = stringToHex("rawKeyString")
+    val rawKeyHexByteArray = rawKeyStringHex.toByteArray(Charset.defaultCharset())
+    val kCryptEntity = KCryptEntity().apply {
+      encodedKey = rawKeyString
+      isStringInHex = false
+    }
+
+    whenever(mockKeyStoreManager.containsAlias(keyAlias)).thenReturn(true)
+    whenever(mockKeyStoreManager.getAsymmetricKey(keyAlias)).thenReturn(mockKey)
+    whenever(mockCipherProvider.decrypt(mockKey, rawKeyStringHex)).thenReturn(rawKeyHexByteArray)
+    whenever(mockStorageProvider.getKey()).thenReturn(kCryptEntity)
+
+    val result = kCryptAndroid.getEncryptionKey(64)
+
+    assertNotNull(result)
+    assertArrayEquals(rawKeyStringByteArray, result)
+    verify(mockKeyStoreManager).initializeKeystore()
+    verify(mockKeyStoreManager).containsAlias(eq(keyAlias))
+    verify(mockKeyStoreManager).getAsymmetricKey(eq(keyAlias))
+    verify(mockCipherProvider).decrypt(eq(mockKey), eq(rawKeyStringHex))
+    verify(mockStorageProvider).getKey()
+  }
+
+  @Test
+  fun `getEncryptionKey generates new key when KeyStoreManager does not contain alias`() {
+    val generatedKey = ByteArray(keySize) // Simulate a generated key
+    val generatedKeyToEncryption = byteArrayToHexString(generatedKey).toByteArray(Charset.defaultCharset())
+    val encryptedKeyHexString = stringToHex("encryptedKeyHexString")
+    whenever(mockKeyStoreManager.containsAlias(keyAlias)).thenReturn(false)
+    whenever(mockKeyStoreManager.getAsymmetricKey(keyAlias)).thenReturn(mockKey)
+    whenever(mockKeyStoreManager.generateSymmetricKey(keyAlias)).thenReturn(mockKey)
+    whenever(mockKeyStoreManager.generate64ByteByteArray(keySize)).thenReturn(generatedKey)
+    whenever(mockCipherProvider.encrypt(generatedKeyToEncryption, mockKey)).thenReturn(encryptedKeyHexString)
+    whenever(mockStorageProvider.writeKey(any())).thenAnswer { }
+
+
+    val result = kCryptAndroid.getEncryptionKey(keySize)
+
+    assertNotNull(result)
+    assertArrayEquals(generatedKey, result)
+    verify(mockKeyStoreManager).initializeKeystore()
+    verify(mockKeyStoreManager).containsAlias(keyAlias)
+    verify(mockKeyStoreManager).getAsymmetricKey(keyAlias)
+    verify(mockKeyStoreManager).generateSymmetricKey(keyAlias)
+    verify(mockKeyStoreManager).generate64ByteByteArray(keySize)
+    verify(mockCipherProvider).encrypt(generatedKeyToEncryption, mockKey)
+    verify(mockStorageProvider).writeKey(any())
+  }
+
   @After
   fun tearDown() {
     verifyNoMoreInteractions(mockCipherProvider)
@@ -320,6 +406,10 @@ class KCryptAndroidTest {
       stringBuilder.append(hexString)
     }
     return stringBuilder.toString()
+  }
+
+  fun byteArrayToHexString(byteArray: ByteArray): String {
+    return byteArray.joinToString("") { "%02x".format(it) }
   }
 
 }
