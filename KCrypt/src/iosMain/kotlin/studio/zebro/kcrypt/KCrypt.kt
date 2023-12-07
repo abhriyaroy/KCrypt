@@ -42,7 +42,7 @@ class KCryptIos(
     } else {
       val newEncryptionKey = iosPlatformHelper.generateRandomByteArray(keySize)
       addOrUpdate(
-        keyName, KCryptKeychainEntity(byteArrayToHexString(newEncryptionKey), false)
+        keyName, KCryptKeychainEntity(byteArrayToHexString(newEncryptionKey), true)
       )
       newEncryptionKey
     }
@@ -140,6 +140,7 @@ class KCryptIos(
     return if (keystoreManager.existsObject(key)) {
       keystoreManager.update(key, value)
     } else {
+      println("in add key $key and value $value")
       keystoreManager.add(key, value)
     }
   }
