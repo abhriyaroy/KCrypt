@@ -153,6 +153,7 @@ Contributions to KCrypt are welcome! Feel free to open issues for feature reques
 ## Test Reports
 
 ![KCrypt Build and Test](https://github.com/abhriyaroy/KCrypt/actions/workflows/main.yaml/badge.svg)
+
 You can view the latest test reports [here](https://github.com/abhriyaroy/KCrypt/actions/workflows/main.yaml).
 
 
