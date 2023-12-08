@@ -21,3 +21,15 @@ jobs:
 
       - name: Build and run tests
         run: ./gradlew allTests
+
+      - name: Upload Test Report For Android
+        uses: actions/upload-artifact@v2
+        with:
+            name: test-reports-android
+            path: build/reports/tests/testReleaseUnitTest
+
+      - name: Upload Test Report For iOS
+        uses: actions/upload-artifact@v2
+        with:
+          name: test-reports-ios
+          path: build/reports/tests/iosSimulatorArm64Test

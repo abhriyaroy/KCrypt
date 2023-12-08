@@ -6,6 +6,16 @@ KCrypt is a Kotlin Multiplatform Mobile (KMM) library that provides a secure and
 
 Kcrypt also provides a secured storage where in key-value pairs.
 
+# Index
+- Features[#features]
+- Upcoming features[#upcoming-features]
+- Use case[#use-case]
+- Usage[#usage]
+- Compatibility[#compatibility]
+- Contributing[#contributing]
+- Test Reports[#test-reports]
+- License[#license]
+
 ## Features
 
 - Secure Key Generation: KCrypt handles the generation of secure encryption keys based on platform-specific best practices and provides you with a unique key that persists as long as the app stays installed.
@@ -139,6 +149,13 @@ KCrypt is designed to work with Kotlin Multiplatform Mobile projects targeting b
 ## Contributing
 
 Contributions to KCrypt are welcome! Feel free to open issues for feature requests, bug reports, or general discussions. Pull requests are also appreciated.
+
+## Test Reports
+
+![KCrypt Build and Test](https://github.com/abhriyaroy/KCrypt/actions/workflows/main.yaml/badge.svg)
+
+You can view the latest test reports [here](https://github.com/abhriyaroy/KCrypt/actions/workflows/main.yaml).
+
 
 ## License
 
