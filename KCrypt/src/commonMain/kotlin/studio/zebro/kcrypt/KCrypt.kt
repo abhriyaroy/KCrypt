@@ -19,6 +19,8 @@ interface KCrypt {
 
   fun saveInt(key: String, value: Int)
 
+  fun saveLong(key: String, value: Long)
+
   fun saveFloat(key: String, value: Float)
 
   fun saveDouble(key: String, value: Double)
@@ -28,6 +30,8 @@ interface KCrypt {
   fun getBoolean(key: String): Boolean?
 
   fun getInt(key: String): Int?
+
+  fun getLong(key: String): Long?
 
   fun getFloat(key: String): Float?
 

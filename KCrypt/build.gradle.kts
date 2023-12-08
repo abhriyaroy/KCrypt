@@ -4,6 +4,7 @@ plugins {
   id("io.realm.kotlin") version "1.10.0"
   id("convention.publication")
   kotlin("plugin.serialization") version "1.9.0"
+  id("com.google.devtools.ksp") version "1.9.10-1.0.13"
 }
 
 kotlin {
@@ -35,10 +36,21 @@ kotlin {
     val commonTest by getting {
       dependencies {
         implementation(kotlin("test"))
+        implementation(kotlin("test-common"))
+        implementation(kotlin("test-annotations-common"))
       }
     }
     val androidMain by getting
-    val androidUnitTest by getting
+    val androidUnitTest by getting {
+      dependencies {
+        implementation("junit:junit:4.13.2")
+        implementation("org.jetbrains.kotlin:kotlin-test-junit:1.6.10")
+
+        implementation("org.mockito:mockito-core:4.0.0")
+        implementation("org.mockito.kotlin:mockito-kotlin:4.0.0")
+
+      }
+    }
     val iosX64Main by getting
     val iosArm64Main by getting
     val iosSimulatorArm64Main by getting
@@ -56,8 +68,19 @@ kotlin {
       iosX64Test.dependsOn(this)
       iosArm64Test.dependsOn(this)
       iosSimulatorArm64Test.dependsOn(this)
+      dependencies {
+        implementation("io.mockative:mockative:2.0.1")
+      }
     }
   }
+}
+
+dependencies {
+  configurations
+    .filter { it.name.startsWith("ksp") && it.name.contains("Test") }
+    .forEach {
+      add(it.name, "io.mockative:mockative-processor:2.0.1")
+    }
 }
 
 android {
