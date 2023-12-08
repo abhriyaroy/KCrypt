@@ -43,9 +43,6 @@ kotlin {
     val androidMain by getting
     val androidUnitTest by getting {
       dependencies {
-//        implementation("org.mockito.kotlin:mockito-kotlin:5.1.0")
-//        implementation("org.mockito:mockito-inline:5.1.0")
-
         implementation("junit:junit:4.13.2")
         implementation("org.jetbrains.kotlin:kotlin-test-junit:1.6.10")
 
