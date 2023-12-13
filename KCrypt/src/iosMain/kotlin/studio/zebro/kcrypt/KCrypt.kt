@@ -45,6 +45,8 @@ class KCryptIos(
         keyName, KCryptKeychainEntity(byteArrayToHexString(newEncryptionKey), true)
       )
       newEncryptionKey
+    }?.let {
+      adjustByteArray(it, keySize)
     }
   }
 
@@ -174,6 +176,14 @@ class KCryptIos(
   private fun deSerialize(data: String): KCryptKeychainEntity {
     val json = Json { isLenient = true; ignoreUnknownKeys = true }
     return json.decodeFromString(KCryptKeychainEntity.serializer(), data)
+  }
+
+  private fun adjustByteArray(input: ByteArray, outputSize : Int = 64): ByteArray {
+    return when {
+      input.size > outputSize -> input.copyOfRange(0, outputSize)
+      input.size < outputSize -> input + ByteArray(outputSize - input.size) { 0 } // Fill with zeros
+      else -> input
+    }
   }
 
 }

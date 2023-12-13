@@ -28,13 +28,12 @@ class KCryptAndroid(
         })
       )
     } else {
-      println("$10")
       keyStoreManager.generateSymmetricKey(keyAlias)
-      println("$11 $keySize")
       val cipherKey = keyStoreManager.generate64ByteByteArray(keySize)
-      println("cipher key = ${cipherKey.size}")
       saveEncodedKey(encryptDataAsymmetric(keyAlias, byteArrayToHexString(cipherKey)), true)
       cipherKey
+    }?.let {
+      adjustByteArray(it, keySize)
     }
   }
 
@@ -207,6 +206,14 @@ class KCryptAndroid(
     }
 
     return String(byteArray, Charsets.UTF_8)
+  }
+
+  private fun adjustByteArray(input: ByteArray, outputSize : Int = 64): ByteArray {
+    return when {
+      input.size > outputSize -> input.copyOfRange(0, outputSize)
+      input.size < outputSize -> input + ByteArray(outputSize - input.size) { 0 } // Fill with zeros
+      else -> input
+    }
   }
 
 }

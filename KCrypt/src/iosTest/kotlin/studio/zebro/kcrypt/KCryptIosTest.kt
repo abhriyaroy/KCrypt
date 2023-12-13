@@ -462,14 +462,14 @@ class KCryptIosTest {
     val testKeyName = "KCryptKey"
     val testHexString = "A1B2C3" // Example hex string
     val expectedByteArray =
-      byteArrayOf(0xA1.toByte(), 0xB2.toByte(), 0xC3.toByte()) // Corresponding ByteArray
+      adjustByteArray(byteArrayOf(0xA1.toByte(), 0xB2.toByte(), 0xC3.toByte())) // Corresponding ByteArray
     val testKCryptKeychainEntity = KCryptKeychainEntity(testHexString, true)
 
     every {
       mockKeystoreManager.value(testKeyName)
     }.returns(Json.encodeToString(KCryptKeychainEntity.serializer(), testKCryptKeychainEntity))
 
-    val result = kCryptIos.getEncryptionKey(expectedByteArray.size)
+    val result = kCryptIos.getEncryptionKey(64)
 
     verify {
       mockKeystoreManager.value(testKeyName)
@@ -487,14 +487,14 @@ class KCryptIosTest {
   fun `getEncryptionKey retrieves and converts and decodes pre-stored non-hex key correctly`() {
     val testKeyName = "KCryptKey"
     val testString = "TestKey" // Example string
-    val expectedByteArray = testString.encodeToByteArray() // Corresponding ByteArray
+    val expectedByteArray = adjustByteArray(testString.encodeToByteArray()) // Corresponding ByteArray
     val testKCryptKeychainEntity = KCryptKeychainEntity(testString, false)
 
     every {
       mockKeystoreManager.value(testKeyName)
     }.returns(Json.encodeToString(KCryptKeychainEntity.serializer(), testKCryptKeychainEntity))
 
-    val result = kCryptIos.getEncryptionKey(expectedByteArray.size)
+    val result = kCryptIos.getEncryptionKey(64)
 
     verify {
       mockKeystoreManager.value(testKeyName)
@@ -688,6 +688,14 @@ class KCryptIosTest {
     }
     println("mock2 == $byteArray")
     return result.toString()
+  }
+
+  private fun adjustByteArray(input: ByteArray, outputSize : Int = 64): ByteArray {
+    return when {
+      input.size > outputSize -> input.copyOfRange(0, outputSize)
+      input.size < outputSize -> input + ByteArray(outputSize - input.size) { 0 } // Fill with zeros
+      else -> input
+    }
   }
 
 }
