@@ -19,7 +19,7 @@ class Greeting {
     getKCrypt().saveDouble("doubleVal", doubleValue)
     getKCrypt().saveBoolean("booleanVal", booleanValue)
     return "Hello, ${platform.name}! $key \n fetched values = ${getKCrypt().getString("stringVal")} , ${getKCrypt().getInt("intVal")} , " +
-        "${getKCrypt().getFloat("floatVal")} , ${getKCrypt().getDouble("doubleVal")}, ${getKCrypt().getBoolean("booleanVal")}"
+        "${getKCrypt().getFloat("floatVal")} , ${getKCrypt().getDouble("doubleVal")}, ${getKCrypt().getBoolean("booleanVal1")}"
   }
 
   fun hexToString(hex: String): String {

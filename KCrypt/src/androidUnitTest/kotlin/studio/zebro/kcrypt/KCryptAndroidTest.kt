@@ -188,6 +188,20 @@ class KCryptAndroidTest {
   }
 
   @Test
+  fun `getString retrieves and decrypts null correctly`() {
+    val testKey = "testKey"
+
+    whenever(mockStorageProvider.getItemFromStorage(eq(testKey))).thenReturn(null)
+
+    val result = kCryptAndroid.getString(testKey)
+
+    verify(mockKeyStoreManager).initializeKeystore()
+    verify(mockStorageProvider).getItemFromStorage(eq(testKey))
+
+    assert(result == null)
+  }
+
+  @Test
   fun `getBoolean retrieves and decrypts boolean correctly`() {
     val testKey = "testKey"
     val encryptedValue = "encryptedBoolean"

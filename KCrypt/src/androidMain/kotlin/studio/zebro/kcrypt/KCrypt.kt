@@ -14,9 +14,7 @@ class KCryptAndroid(
   private val keyAlias = "encryption_key"
 
   override fun getEncryptionKey(keySize: Int): ByteArray? {
-    println("$00")
     keyStoreManager.initializeKeystore()
-    println("$01")
     return if (keyStoreManager.containsAlias(keyAlias)) {
       hexStringToByteArray(
         decryptDataAsymmetric(keyAlias, getEncodedKey().let {
@@ -100,10 +98,12 @@ class KCryptAndroid(
 
   override fun getString(key: String): String? {
     keyStoreManager.initializeKeystore()
-    return decryptDataAsymmetric(
-      keyAlias, storageProvider.getItemFromStorage(key)
-    ).let {
-      hexStringToNormalString(it)
+    return storageProvider.getItemFromStorage(key)?.let {
+      decryptDataAsymmetric(
+        keyAlias, it
+      ).let {
+        hexStringToNormalString(it)
+      }
     }
   }
 
