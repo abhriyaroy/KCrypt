@@ -70,7 +70,7 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                implementation("io.github.abhriyaroy:KCrypt:0.0.8")
+                implementation("io.github.abhriyaroy:KCrypt:0.0.15")
             }
         }
     }
