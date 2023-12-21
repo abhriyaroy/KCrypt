@@ -14,9 +14,7 @@ class KCryptAndroid(
   private val keyAlias = "encryption_key"
 
   override fun getEncryptionKey(keySize: Int): ByteArray? {
-    println("$00")
     keyStoreManager.initializeKeystore()
-    println("$01")
     return if (keyStoreManager.containsAlias(keyAlias)) {
       hexStringToByteArray(
         decryptDataAsymmetric(keyAlias, getEncodedKey().let {
@@ -28,13 +26,12 @@ class KCryptAndroid(
         })
       )
     } else {
-      println("$10")
       keyStoreManager.generateSymmetricKey(keyAlias)
-      println("$11 $keySize")
       val cipherKey = keyStoreManager.generate64ByteByteArray(keySize)
-      println("cipher key = ${cipherKey.size}")
       saveEncodedKey(encryptDataAsymmetric(keyAlias, byteArrayToHexString(cipherKey)), true)
       cipherKey
+    }?.let {
+      adjustByteArray(it, keySize)
     }
   }
 
@@ -101,10 +98,12 @@ class KCryptAndroid(
 
   override fun getString(key: String): String? {
     keyStoreManager.initializeKeystore()
-    return decryptDataAsymmetric(
-      keyAlias, storageProvider.getItemFromStorage(key)
-    ).let {
-      hexStringToNormalString(it)
+    return storageProvider.getItemFromStorage(key)?.let {
+      decryptDataAsymmetric(
+        keyAlias, it
+      ).let {
+        hexStringToNormalString(it)
+      }
     }
   }
 
@@ -207,6 +206,14 @@ class KCryptAndroid(
     }
 
     return String(byteArray, Charsets.UTF_8)
+  }
+
+  private fun adjustByteArray(input: ByteArray, outputSize : Int = 64): ByteArray {
+    return when {
+      input.size > outputSize -> input.copyOfRange(0, outputSize)
+      input.size < outputSize -> input + ByteArray(outputSize - input.size) { 0 } // Fill with zeros
+      else -> input
+    }
   }
 
 }

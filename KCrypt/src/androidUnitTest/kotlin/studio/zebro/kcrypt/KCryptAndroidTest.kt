@@ -188,6 +188,20 @@ class KCryptAndroidTest {
   }
 
   @Test
+  fun `getString retrieves and decrypts null correctly`() {
+    val testKey = "testKey"
+
+    whenever(mockStorageProvider.getItemFromStorage(eq(testKey))).thenReturn(null)
+
+    val result = kCryptAndroid.getString(testKey)
+
+    verify(mockKeyStoreManager).initializeKeystore()
+    verify(mockStorageProvider).getItemFromStorage(eq(testKey))
+
+    assert(result == null)
+  }
+
+  @Test
   fun `getBoolean retrieves and decrypts boolean correctly`() {
     val testKey = "testKey"
     val encryptedValue = "encryptedBoolean"
@@ -300,7 +314,7 @@ class KCryptAndroidTest {
     val result = kCryptAndroid.getEncryptionKey(64)
 
     assertNotNull(result)
-    assertArrayEquals(expectedKeyByteArray, result)
+    assertArrayEquals(adjustByteArray(expectedKeyByteArray), result)
     verify(mockKeyStoreManager).initializeKeystore()
     verify(mockKeyStoreManager).containsAlias(eq(keyAlias))
     verify(mockKeyStoreManager).getAsymmetricKey(eq(keyAlias))
@@ -327,7 +341,7 @@ class KCryptAndroidTest {
     val result = kCryptAndroid.getEncryptionKey(64)
 
     assertNotNull(result)
-    assertArrayEquals(rawKeyStringByteArray, result)
+    assertArrayEquals(adjustByteArray(rawKeyStringByteArray), result)
     verify(mockKeyStoreManager).initializeKeystore()
     verify(mockKeyStoreManager).containsAlias(eq(keyAlias))
     verify(mockKeyStoreManager).getAsymmetricKey(eq(keyAlias))
@@ -351,7 +365,7 @@ class KCryptAndroidTest {
     val result = kCryptAndroid.getEncryptionKey(keySize)
 
     assertNotNull(result)
-    assertArrayEquals(generatedKey, result)
+    assertArrayEquals(adjustByteArray(generatedKey), result)
     verify(mockKeyStoreManager).initializeKeystore()
     verify(mockKeyStoreManager).containsAlias(keyAlias)
     verify(mockKeyStoreManager).getAsymmetricKey(keyAlias)
@@ -366,7 +380,7 @@ class KCryptAndroidTest {
     val expectedKey = "encryptedKeyString"
     val expectedKeyByteArray = expectedKey.toByteArray(Charset.defaultCharset())
     val expectedKeyHexString = stringToHex(expectedKey)
-    val expectedKeyToEncryptionHexString = byteArrayToHexString(expectedKeyByteArray)
+    val expectedKeyToEncryptionHexString = byteArrayToHexString(adjustByteArray(expectedKeyByteArray))
     val expectedHexByteArray = expectedKeyHexString.toByteArray(Charset.defaultCharset())
     val kCryptEntity = KCryptEntity().apply {
       encodedKey = expectedKeyHexString
@@ -393,7 +407,7 @@ class KCryptAndroidTest {
   fun `getEncryptionKeyToHexString returns key when KeyStoreManager contains alias and isStringInHex is false`() {
     val rawKeyString = "rawKeyString"
     val rawKeyStringByteArray = rawKeyString.toByteArray(Charset.defaultCharset())
-    val expectedKeyToEncryptionHexString = byteArrayToHexString(rawKeyStringByteArray)
+    val expectedKeyToEncryptionHexString = byteArrayToHexString(adjustByteArray(rawKeyStringByteArray))
     val rawKeyStringHex = stringToHex(rawKeyString)
     val rawKeyHexByteArray = rawKeyStringHex.toByteArray(Charset.defaultCharset())
     val kCryptEntity = KCryptEntity().apply {
@@ -558,8 +572,16 @@ class KCryptAndroidTest {
     return stringBuilder.toString()
   }
 
-  fun byteArrayToHexString(byteArray: ByteArray): String {
+  private fun byteArrayToHexString(byteArray: ByteArray): String {
     return byteArray.joinToString("") { "%02x".format(it) }
+  }
+
+  private fun adjustByteArray(input: ByteArray, outputSize : Int = 64): ByteArray {
+    return when {
+      input.size > outputSize -> input.copyOfRange(0, outputSize)
+      input.size < outputSize -> input + ByteArray(outputSize - input.size) { 0 } // Fill with zeros
+      else -> input
+    }
   }
 
 }

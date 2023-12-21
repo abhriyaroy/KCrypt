@@ -13,12 +13,12 @@ interface StorageProvider {
   fun getKey() : KCryptEntity
 
   fun writeItemToStorage(kCryptStorageItemEntity: KCryptStorageItemEntity)
-  fun getItemFromStorage(key : String) : String
+  fun getItemFromStorage(key : String) : String?
 }
 
 class StorageProviderImpl : StorageProvider {
 
-  private val realmName = "krypt.realm"
+  private val realmName = "kryptrealm"
   private var realm: Realm? = null
 
   override fun writeKey(kCryptEntity: KCryptEntity) {
@@ -39,15 +39,18 @@ class StorageProviderImpl : StorageProvider {
     }
   }
 
-  override fun getItemFromStorage(key: String) : String {
+  override fun getItemFromStorage(key: String) : String? {
     return getRealm().query(KCryptStorageItemEntity::class).find().filter { it.key == key }.let {
-      it.first().value
+      if(it.isNullOrEmpty()){
+        null
+      } else {
+        it.first().value
+      }
     }
   }
 
   private fun getRealm(): Realm {
     if (realm == null) {
-
       val configuration = RealmConfiguration
         .Builder(
           schema = setOf(
@@ -55,13 +58,13 @@ class StorageProviderImpl : StorageProvider {
             KCryptStorageItemEntity::class
           )
         )
-        .schemaVersion(2)
-        .migration(object : AutomaticSchemaMigration {
-          override fun migrate(migrationContext: AutomaticSchemaMigration.MigrationContext) {
-
-          }
-        })
         .name(realmName)
+        .schemaVersion(2)
+//        .migration(object : AutomaticSchemaMigration {
+//          override fun migrate(migrationContext: AutomaticSchemaMigration.MigrationContext) {
+//            migrationContext.newRealm.copyToRealm(migrationContext.oldRealm.configuration)
+//          }
+//        })
         .build()
       realm = Realm.open(configuration)
     }
