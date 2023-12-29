@@ -119,7 +119,7 @@ kCrypt.getString("stringVal")
 // save int value
 kCrypt.saveInt("intVal", 101)
 // retrieve saved int value
-kCrypt..getInt("intVal")
+kCrypt.getInt("intVal")
 
 // save float value
 kCrypt.saveFloat("floatVal", 100.5f)
